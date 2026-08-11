@@ -229,9 +229,9 @@ def verify(gaps: np.ndarray, n_qubits: int, n_shuffles: int = 50, seed: int = 0)
     )
 
 
-def run_on_hardware(circuit: QuantumCircuit, backend_name: str | None, shots: int) -> dict[str, int]:
+def run_on_hardware(circuit: QuantumCircuit, backend_name: str | None, shots: int) -> tuple[dict[str, int], str]:
     """Transpile `circuit` (with measurements) for a real IBM Quantum backend and
-    run it via the Sampler primitive, returning bitstring -> count.
+    run it via the Sampler primitive, returning (bitstring -> count, backend name).
 
     Needs IBM Quantum credentials: either the QISKIT_IBM_TOKEN environment
     variable (see README.md for how to set it), or an account already saved
@@ -252,7 +252,7 @@ def run_on_hardware(circuit: QuantumCircuit, backend_name: str | None, shots: in
     print(f"Submitted job {job.job_id()}, waiting for results...")
     result = job.result()
     counts = result[0].data.meas.get_counts()
-    return dict(counts)
+    return dict(counts), backend.name
 
 
 def plot_gap_sequence(gaps: np.ndarray) -> Path:
@@ -275,14 +275,14 @@ def plot_amplitude_landscape(probabilities: np.ndarray, phases: np.ndarray, n_qu
 
     ax_prob.bar(range(dim), probabilities, color="tab:blue")
     ax_prob.set_ylabel("probability")
-    ax_prob.set_title(f"Amplitude landscape after QFT ({n_qubits} qubits, {dim} basis states)")
+    ax_prob.set_title(f"Amplitude landscape after QFT -- SIMULATED ({n_qubits} qubits, {dim} basis states)")
 
     ax_phase.bar(range(dim), phases, color="tab:orange")
     ax_phase.set_ylabel("phase (rad)")
     ax_phase.set_xlabel("computational basis state index")
 
     fig.tight_layout()
-    path = OUTPUT_DIR / "amplitude_landscape.png"
+    path = OUTPUT_DIR / "amplitude_landscape_sim.png"
     fig.savefig(path, dpi=150)
     plt.close(fig)
     return path
@@ -300,9 +300,49 @@ def plot_frequency_portrait(probabilities: np.ndarray, n_qubits: int) -> Path:
     ax.plot(freqs, shifted_probs, marker="o", color="tab:green")
     ax.set_xlabel("frequency bin")
     ax.set_ylabel("probability")
-    ax.set_title("Frequency portrait of the prime gap wave")
+    ax.set_title("Frequency portrait of the prime gap wave -- SIMULATED")
     fig.tight_layout()
-    path = OUTPUT_DIR / "frequency_portrait.png"
+    path = OUTPUT_DIR / "frequency_portrait_sim.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
+def hardware_counts_to_probabilities(counts: dict[str, int], n_qubits: int) -> np.ndarray:
+    """Convert a bitstring -> count map from `run_on_hardware` into a probability
+    array indexed the same way as `Statevector.probabilities()`: index k has
+    qubit 0 as its least significant bit, which is also how Qiskit writes
+    measurement bitstrings (leftmost char = highest classical bit), so
+    `int(bitstring, 2)` lines up with the statevector index directly."""
+    dim = 2**n_qubits
+    total = sum(counts.values())
+    probabilities = np.zeros(dim)
+    for bitstring, count in counts.items():
+        probabilities[int(bitstring, 2)] = count / total
+    return probabilities
+
+
+def plot_hardware_overlay(sim_probabilities: np.ndarray, counts: dict[str, int], n_qubits: int, backend_name: str) -> Path:
+    """Overlay real QUANTUM HARDWARE measured probabilities against the SIMULATED
+    statevector probabilities for the same circuit, so noise/decoherence effects
+    are visible directly against the ideal result."""
+    dim = 2**n_qubits
+    shots = sum(counts.values())
+    hardware_probabilities = hardware_counts_to_probabilities(counts, n_qubits)
+
+    x = np.arange(dim)
+    width = 0.4
+    fig, ax = plt.subplots(figsize=(9, 4.5))
+    ax.bar(x - width / 2, sim_probabilities, width, label="simulated", color="tab:blue")
+    ax.bar(x + width / 2, hardware_probabilities, width, label=f"quantum hardware ({backend_name})", color="tab:red")
+    ax.set_xlabel("computational basis state index")
+    ax.set_ylabel("probability")
+    ax.set_title(f"QUANTUM HARDWARE ({backend_name}, {shots} shots) vs SIMULATED amplitude landscape")
+    ax.legend()
+    fig.tight_layout()
+
+    backend_slug = "".join(c if c.isalnum() else "_" for c in backend_name)
+    path = OUTPUT_DIR / f"amplitude_landscape_quantum_{backend_slug}.png"
     fig.savefig(path, dpi=150)
     plt.close(fig)
     return path
@@ -338,6 +378,13 @@ def main() -> None:
     print(f"  Real gap-sequence entropy:                  {result.real_entropy:.4f} bits")
     print(f"  Mean entropy over 50 shuffled controls:     {result.mean_shuffled_entropy:.4f} bits")
     print(f"  Ordering looks structured (real < shuffled): {result.ordering_looks_structured()}")
+    print(
+        "\nNote: probability is symmetric about index dim/2 (P(k) ~= P(dim-k)) because the "
+        "pre-QFT state is entirely real-valued (only Ry and CX gates, no complex phases) -- that's "
+        "a generic property of a QFT applied to any real input, not a sign of prime structure at "
+        "those specific basis-state indices. With only dim=16 indices, some of them landing on "
+        "small primes (2, 3, 5, 7, 11, 13) by coincidence is expected, not significant on its own."
+    )
 
     if not result.all_hard_checks_passed():
         raise SystemExit("Hard verification checks failed -- refusing to plot or touch hardware.")
@@ -355,11 +402,14 @@ def main() -> None:
 
     if args.hardware:
         print()
-        counts = run_on_hardware(circuit, args.backend, args.shots)
+        counts, backend_name = run_on_hardware(circuit, args.backend, args.shots)
         total = sum(counts.values())
         print(f"Top 10 measured bitstrings out of {total} shots:")
         for bitstring, count in sorted(counts.items(), key=lambda kv: -kv[1])[:10]:
             print(f"  {bitstring}: {count} ({count / total:.1%})")
+
+        overlay_path = plot_hardware_overlay(probabilities, counts, args.qubits, backend_name)
+        print(f"\nWrote {overlay_path}")
 
 
 if __name__ == "__main__":
