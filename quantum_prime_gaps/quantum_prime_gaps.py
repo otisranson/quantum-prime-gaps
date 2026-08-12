@@ -16,7 +16,7 @@
 
 Pipeline: take the first 50 primes, compute the 49 gaps between consecutive
 primes, and normalize them to [0, pi] rotation angles. A small qubit register
-(4 by default) is repeatedly re-loaded with `Ry` rotations from successive
+(6 by default) is repeatedly re-loaded with `Ry` rotations from successive
 chunks of that angle sequence, with a ring of entangling `CX` gates between
 chunks -- "data re-uploading" (Perez-Salinas et al., 2020), the standard way
 to angle-encode a classical sequence longer than the qubit count into a fixed
@@ -644,7 +644,7 @@ def plot_hardware_overlay(sim_probabilities: np.ndarray, counts: dict[str, int],
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--qubits", type=int, default=4, help="size of the encoding register (default: 4)")
+    parser.add_argument("--qubits", type=int, default=6, help="size of the encoding register (default: 6)")
     parser.add_argument(
         "--predict-steps", type=int, default=10, help="number of gaps to predict past index 49 (default: 10)"
     )
@@ -682,12 +682,15 @@ def main() -> None:
     print(f"  Real gap-sequence entropy:                  {result.real_entropy:.4f} bits")
     print(f"  Mean entropy over 50 shuffled controls:     {result.mean_shuffled_entropy:.4f} bits")
     print(f"  Ordering looks structured (real < shuffled): {result.ordering_looks_structured()}")
+    dim = 2**args.qubits
+    primes_below_dim = [p for p in FIRST_50_PRIMES if p < dim]
     print(
         "\nNote: probability is symmetric about index dim/2 (P(k) ~= P(dim-k)) because the "
         "pre-QFT state is entirely real-valued (only Ry and CX gates, no complex phases) -- that's "
         "a generic property of a QFT applied to any real input, not a sign of prime structure at "
-        "those specific basis-state indices. With only dim=16 indices, some of them landing on "
-        "small primes (2, 3, 5, 7, 11, 13) by coincidence is expected, not significant on its own."
+        f"those specific basis-state indices. With dim={dim} indices, {len(primes_below_dim)} of them "
+        f"({', '.join(str(p) for p in primes_below_dim)}) landing on primes by coincidence is expected, "
+        "not significant on its own."
     )
 
     if not result.all_hard_checks_passed():
