@@ -64,6 +64,11 @@ matplotlib.use("Agg")
 
 OUTPUT_DIR = Path(__file__).parent / "output"
 
+# Register size for the amplitude-encoding prediction pathway below -- 64 dimensions,
+# comfortably >= the 49 (forward) or 39 (backward-verification) known gaps, with the
+# same size used for both so the two runs are directly comparable.
+AMPLITUDE_QUBITS = 6
+
 FIRST_50_PRIMES = [
     2, 3, 5, 7, 11, 13, 17, 19, 23, 29,
     31, 37, 41, 43, 47, 53, 59, 61, 67, 71,
@@ -229,6 +234,274 @@ def verify(gaps: np.ndarray, n_qubits: int, n_shuffles: int = 50, seed: int = 0)
     )
 
 
+# --- Prediction phase --------------------------------------------------------------
+#
+# Everything above treats the gap sequence as a wave (time domain) and reads its QFT
+# as that wave's spectrum (frequency domain) -- but the re-upload encoding used for
+# the landscape/portrait above is a lossy, nonlinear feature map (the same small
+# register is repeatedly overwritten and entangled across chunks), so there is no
+# meaningful inverse QFT back through it to the original gap values. Prediction needs
+# a genuinely invertible mapping, so it gets its own encoding: amplitude encoding
+# (the classical vector, once L2-normalized, literally *is* the statevector's
+# amplitudes), which makes the following two things well-defined:
+#
+# 1. Gate-level pathway (dim = 2**AMPLITUDE_QUBITS, zero-padded): a real Quantum
+#    Fourier Transform of real time-domain samples, exactly invertible. Used only to
+#    sanity-check the inverse QFT (`verify_amplitude_qft_roundtrip`) -- it can only
+#    reconstruct the same known points it was given, not new ones.
+# 2. Extrapolation pathway (plain numpy, unpadded, one period = the true number of
+#    known gaps): reads the frequency domain as a continuous function of time and
+#    evaluates it *past* the known window (`fourier_extrapolate`). This is what
+#    "time evolution forward" actually means here, and it's classical post-processing
+#    on the same DFT data -- not a claim that the gate-level IQFT itself produces
+#    future values, which no fixed-size inverse transform can do.
+#
+# The same `predict()` function is called for the forward run and for backward
+# verification (predicting known-but-withheld gaps from earlier ones), so a bad
+# backward-verification score reflects the mechanism's real predictive power, not a
+# quirk of two different code paths.
+
+
+def amplitude_encode(values: np.ndarray, n_qubits: int = AMPLITUDE_QUBITS) -> tuple[np.ndarray, float]:
+    """Zero-pad `values` to 2**n_qubits and L2-normalize for amplitude encoding.
+
+    This is a *different* normalization than `normalize_to_angles` above: quantum
+    state amplitudes must have unit L2 norm, not values bounded to [0, pi]. The norm
+    is returned so real-valued magnitudes could be recovered from the encoded state.
+    """
+    dim = 2**n_qubits
+    padded = np.zeros(dim, dtype=float)
+    padded[: len(values)] = values
+    norm = float(np.linalg.norm(padded))
+    if norm == 0:
+        return padded, 0.0
+    return padded / norm, norm
+
+
+def build_amplitude_circuit(normalized_vector: np.ndarray) -> QuantumCircuit:
+    """Literal amplitude encoding: the register is initialized so the statevector's
+    real amplitudes *are* `normalized_vector`, unlike the angle/re-upload encoding
+    used for the landscape/portrait pipeline above."""
+    n_qubits = int(np.log2(len(normalized_vector)))
+    qc = QuantumCircuit(n_qubits, name="amplitude_encode")
+    qc.initialize(normalized_vector, range(n_qubits))
+    return qc
+
+
+@dataclass
+class AmplitudeVerificationResult:
+    matches_numpy_reference: bool
+    roundtrip_matches: bool
+
+    def all_passed(self) -> bool:
+        return self.matches_numpy_reference and self.roundtrip_matches
+
+
+def verify_amplitude_qft_roundtrip(normalized_vector: np.ndarray) -> AmplitudeVerificationResult:
+    """Sanity-check the inverse QFT (checkpoint before any prediction is trusted):
+    confirm the gate-level QFT of an amplitude-encoded state matches the from-scratch
+    numpy DFT reference (`_qft_matrix`, already used by `verify()` above), and that
+    appending its inverse recovers the original amplitudes to floating-point
+    precision -- i.e. the round trip preserves both the values and the normalization.
+    """
+    n_qubits = int(np.log2(len(normalized_vector)))
+
+    forward = build_amplitude_circuit(normalized_vector)
+    forward.append(QFTGate(n_qubits), range(n_qubits))
+    qft_state = Statevector(forward).data
+    reference = _qft_matrix(n_qubits) @ normalized_vector.astype(complex)
+    matches_numpy_reference = bool(np.allclose(qft_state, reference, atol=1e-9))
+
+    roundtrip = forward.copy()
+    roundtrip.append(QFTGate(n_qubits).inverse(), range(n_qubits))
+    roundtrip_state = Statevector(roundtrip).data
+    roundtrip_matches = bool(np.allclose(roundtrip_state, normalized_vector.astype(complex), atol=1e-9))
+
+    return AmplitudeVerificationResult(matches_numpy_reference, roundtrip_matches)
+
+
+def _frequency_components(n: int) -> list[tuple[int, ...]]:
+    """Group DFT bin indices for a length-`n` real-valued signal by frequency,
+    pairing each bin `k` with its complex-conjugate mirror `n - k` (a real signal's
+    spectrum is conjugate-symmetric, so a bin and its mirror always carry the same
+    "frequency" -- unpaired only for the DC bin and, when `n` is even, the Nyquist
+    bin)."""
+    components = []
+    for k in range(n // 2 + 1):
+        mirror = (n - k) % n
+        components.append((k,) if mirror == k else (k, mirror))
+    return components
+
+
+def _ranked_frequency_components(spectrum: np.ndarray, n: int) -> list[tuple[tuple[int, ...], float]]:
+    """Pair each frequency component from `_frequency_components` with its Parseval
+    power (sum |X_k|^2 over its bins) and rank them descending -- this is the same
+    quantity plotted as the amplitude landscape, used here to decide which frequencies
+    "amplitude concentrates" in."""
+    components = _frequency_components(n)
+    powers = [sum(abs(spectrum[b]) ** 2 for b in bins) for bins in components]
+    return sorted(zip(components, powers), key=lambda cp: cp[1], reverse=True)
+
+
+def _dft_reconstruct(spectrum: np.ndarray, n: int, t_values: np.ndarray, top_k: int | None = None) -> np.ndarray:
+    """Evaluate the inverse-DFT sum x(t) = (1/n) * sum_k X_k * exp(2j*pi*k*t/n) at
+    arbitrary times `t_values`, including t >= n. This is the step that actually reads
+    the frequency domain as a continuous function rather than just the n known sample
+    points -- distinct from, and not the same operation as, the fixed-size gate-level
+    inverse QFT verified above, which can only map the register back to those same n
+    points. Evaluated at integer t in [0, n), this must reproduce the known values
+    exactly when `top_k` is None (see `verify_extrapolation_roundtrip`).
+
+    If `top_k` is given, every frequency component except the `top_k` strongest is
+    zeroed (mirrors kept together so the result stays real), which changes the
+    assumption being tested from "the known window is exactly one period" to "only
+    the dominant few periodicities matter."
+    """
+    if top_k is not None:
+        ranked = _ranked_frequency_components(spectrum, n)
+        keep_bins = {b for bins, _ in ranked[:top_k] for b in bins}
+        mask = np.zeros(n, dtype=bool)
+        mask[list(keep_bins)] = True
+        spectrum = np.where(mask, spectrum, 0)
+
+    t = np.asarray(t_values, dtype=float)
+    k = np.arange(n)
+    phase = 2j * np.pi * np.outer(t, k) / n
+    return (np.exp(phase) @ spectrum).real / n
+
+
+def fourier_extrapolate(values: np.ndarray, n_predict: int, top_k: int | None = None) -> np.ndarray:
+    """"Time evolution": take the known gap sequence's spectrum and evaluate it past
+    the known window to predict the next `n_predict` gaps. Default `top_k=None` keeps
+    every frequency, which is equivalent to assuming the known window is exactly one
+    period -- the least arbitrary default, since any other choice of which frequencies
+    to drop is itself an assumption about the data."""
+    n = len(values)
+    spectrum = np.fft.fft(values)
+    future_t = np.arange(n, n + n_predict)
+    return _dft_reconstruct(spectrum, n, future_t, top_k)
+
+
+def verify_extrapolation_roundtrip(values: np.ndarray) -> bool:
+    """Hard check: the full-spectrum continuous-time reconstruction, evaluated back at
+    the original known indices, must reproduce the known gap values -- confirms
+    `_dft_reconstruct` is a correct inverse DFT and not just a plausible-looking
+    formula. (Only meaningful for the full spectrum -- a `top_k`-truncated
+    reconstruction is expected to differ from the known values by construction.)"""
+    n = len(values)
+    spectrum = np.fft.fft(values)
+    reconstructed = _dft_reconstruct(spectrum, n, np.arange(n), top_k=None)
+    return bool(np.allclose(reconstructed, values, atol=1e-9))
+
+
+@dataclass
+class PredictionResult:
+    known_gaps: np.ndarray
+    predicted_gaps: np.ndarray
+    top_k: int | None
+    predicted_primes: np.ndarray
+
+
+def predict(gaps: np.ndarray, n_predict: int, top_k: int | None, start_prime: int) -> PredictionResult:
+    """The single prediction mechanism used identically for the forward run and for
+    backward verification: only `gaps`, `n_predict`, and `start_prime` differ between
+    the two callers."""
+    predicted_gaps = fourier_extrapolate(gaps, n_predict, top_k=top_k)
+    predicted_primes = start_prime + np.cumsum(predicted_gaps)
+    return PredictionResult(gaps, predicted_gaps, top_k, predicted_primes)
+
+
+@dataclass
+class PrimeCandidate:
+    frequencies_used: int
+    power_fraction: float
+    predicted_gaps: np.ndarray
+    raw_candidates: np.ndarray
+    nearest_primes: list[int]
+    distances: np.ndarray
+
+
+def spectral_candidate_zones(
+    values: np.ndarray,
+    n_predict: int,
+    start_prime: int,
+    prime_pool: list[int],
+    max_levels: int = 5,
+) -> list[PrimeCandidate]:
+    """Read where amplitude concentrates in the frequency domain and turn that into
+    ranked candidate primes. Each "zone" is a reconstruction built from the top-k
+    strongest frequency components (k = 1, 2, 3, ...), weighted by the cumulative
+    fraction of Parseval spectral power those components represent -- the same
+    quantity plotted as the amplitude landscape, not an invented probability. Weight
+    approaches 1.0 as more components are included; the last zone (using every
+    component) matches the default `top_k=None` prediction."""
+    n = len(values)
+    spectrum = np.fft.fft(values)
+    ranked = _ranked_frequency_components(spectrum, n)
+    total_power = float(sum(power for _, power in ranked))
+
+    zones = []
+    for level in range(1, min(max_levels, len(ranked)) + 1):
+        kept_power = float(sum(power for _, power in ranked[:level]))
+        power_fraction = kept_power / total_power if total_power > 0 else 0.0
+        predicted_gaps = fourier_extrapolate(values, n_predict, top_k=level)
+        raw_candidates = start_prime + np.cumsum(predicted_gaps)
+        nearest_primes = [min(prime_pool, key=lambda c: abs(c - raw)) for raw in raw_candidates]
+        distances = np.abs(np.array(nearest_primes) - raw_candidates)
+        zones.append(
+            PrimeCandidate(
+                frequencies_used=level,
+                power_fraction=power_fraction,
+                predicted_gaps=predicted_gaps,
+                raw_candidates=raw_candidates,
+                nearest_primes=nearest_primes,
+                distances=distances,
+            )
+        )
+    return zones
+
+
+@dataclass
+class BackwardVerificationResult:
+    predicted_gaps: np.ndarray
+    actual_gaps: np.ndarray
+    mae: float
+    baseline_mean_mae: float
+    baseline_last_repeat_mae: float
+
+    def beats_baselines(self) -> bool:
+        return self.mae < min(self.baseline_mean_mae, self.baseline_last_repeat_mae)
+
+
+def backward_verify(top_k: int | None = None, n_predict: int = 10) -> BackwardVerificationResult:
+    """The accuracy check: feed in the first 40 primes (39 known gaps), predict the
+    next `n_predict` gaps (indices 40..49, i.e. exactly the gaps needed to know primes
+    41..50), and compare against the real values, via the exact same `predict()` used
+    for the forward run -- a bad score here means the mechanism, not just the specific
+    forward guess, doesn't work. Two naive baselines (repeat the mean known gap;
+    repeat the last known gap) are reported alongside so "reasonable accuracy" has a
+    reference point, the same role the shuffled-control comparison plays in `verify()`.
+    """
+    all_gaps = prime_gaps(FIRST_50_PRIMES)
+    known_gaps = all_gaps[:39]
+    actual_gaps = all_gaps[39 : 39 + n_predict]
+    start_prime = FIRST_50_PRIMES[39]  # the 40th prime
+
+    result = predict(known_gaps, n_predict, top_k, start_prime)
+    mae = float(np.mean(np.abs(result.predicted_gaps - actual_gaps)))
+
+    baseline_mean_mae = float(np.mean(np.abs(known_gaps.mean() - actual_gaps)))
+    baseline_last_repeat_mae = float(np.mean(np.abs(known_gaps[-1] - actual_gaps)))
+
+    return BackwardVerificationResult(
+        predicted_gaps=result.predicted_gaps,
+        actual_gaps=actual_gaps,
+        mae=mae,
+        baseline_mean_mae=baseline_mean_mae,
+        baseline_last_repeat_mae=baseline_last_repeat_mae,
+    )
+
+
 def run_on_hardware(circuit: QuantumCircuit, backend_name: str | None, shots: int) -> tuple[dict[str, int], str]:
     """Transpile `circuit` (with measurements) for a real IBM Quantum backend and
     run it via the Sampler primitive, returning (bitstring -> count, backend name).
@@ -308,6 +581,27 @@ def plot_frequency_portrait(probabilities: np.ndarray, n_qubits: int) -> Path:
     return path
 
 
+def plot_extended_wave(known_gaps: np.ndarray, predicted_gaps: np.ndarray) -> Path:
+    """The gap sequence known so far, plus the spectrally-extrapolated prediction
+    past it, with the boundary between the two marked explicitly."""
+    fig, ax = plt.subplots(figsize=(10, 4))
+    known_idx = np.arange(1, len(known_gaps) + 1)
+    predicted_idx = np.arange(len(known_gaps) + 1, len(known_gaps) + len(predicted_gaps) + 1)
+
+    ax.plot(known_idx, known_gaps, "o-", color="tab:blue", label="known")
+    ax.plot(predicted_idx, predicted_gaps, "o--", color="tab:red", label="predicted")
+    ax.axvline(len(known_gaps) + 0.5, color="gray", linestyle=":", linewidth=1)
+    ax.set_xlabel("gap index")
+    ax.set_ylabel("gap size")
+    ax.set_title("Prime gap wave: known vs. spectrally-extrapolated prediction")
+    ax.legend()
+    fig.tight_layout()
+    path = OUTPUT_DIR / "extended_wave_predicted.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
 def hardware_counts_to_probabilities(counts: dict[str, int], n_qubits: int) -> np.ndarray:
     """Convert a bitstring -> count map from `run_on_hardware` into a probability
     array indexed the same way as `Statevector.probabilities()`: index k has
@@ -351,6 +645,16 @@ def plot_hardware_overlay(sim_probabilities: np.ndarray, counts: dict[str, int],
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--qubits", type=int, default=4, help="size of the encoding register (default: 4)")
+    parser.add_argument(
+        "--predict-steps", type=int, default=10, help="number of gaps to predict past index 49 (default: 10)"
+    )
+    parser.add_argument(
+        "--top-k",
+        type=int,
+        default=None,
+        help="restrict the forward prediction to the top-K dominant frequency components "
+        "(default: use all, i.e. assume the known 49-gap window is exactly one period)",
+    )
     parser.add_argument("--hardware", action="store_true", help="run the encoded circuit on real IBM Quantum hardware")
     parser.add_argument("--backend", type=str, default=None, help="IBM backend name (default: least busy)")
     parser.add_argument("--shots", type=int, default=4096, help="shots for hardware execution (default: 4096)")
@@ -399,6 +703,43 @@ def main() -> None:
     print(f"\nWrote {gap_path}")
     print(f"Wrote {landscape_path}")
     print(f"Wrote {portrait_path}")
+
+    print("\nVerifying the prediction pathway before predicting anything...")
+    normalized_vector, _ = amplitude_encode(gaps)
+    amp_result = verify_amplitude_qft_roundtrip(normalized_vector)
+    extrap_ok = verify_extrapolation_roundtrip(gaps)
+    print(f"  Amplitude-encoded QFT matches numpy DFT reference:        {amp_result.matches_numpy_reference}")
+    print(f"  QFT -> inverse QFT round trip recovers amplitudes:        {amp_result.roundtrip_matches}")
+    print(f"  Full-spectrum extrapolation round trip matches known gaps: {extrap_ok}")
+    if not (amp_result.all_passed() and extrap_ok):
+        raise SystemExit("Prediction-pathway verification failed -- refusing to predict.")
+
+    print(f"\nBackward verification -- predicting gaps 40-49 (primes 41-50) from only the first 40 primes:")
+    backward = backward_verify(top_k=args.top_k)
+    for step, (pred, actual) in enumerate(zip(backward.predicted_gaps, backward.actual_gaps), start=1):
+        print(f"  gap {39 + step}: predicted {pred:6.2f}  actual {actual:5.0f}  error {abs(pred - actual):5.2f}")
+    print(f"  MAE (model):                 {backward.mae:.3f}")
+    print(f"  MAE (baseline, mean gap):    {backward.baseline_mean_mae:.3f}")
+    print(f"  MAE (baseline, repeat last): {backward.baseline_last_repeat_mae:.3f}")
+    print(f"  Model beats both naive baselines: {backward.beats_baselines()}")
+
+    print(f"\nForward prediction: {args.predict_steps} steps past gap 49 (top_k={args.top_k}):")
+    prediction = predict(gaps, args.predict_steps, args.top_k, start_prime=FIRST_50_PRIMES[-1])
+    for step, (gap, candidate) in enumerate(zip(prediction.predicted_gaps, prediction.predicted_primes), start=1):
+        print(f"  gap {49 + step}: predicted {gap:6.2f}  -> raw candidate {candidate:7.1f}")
+
+    wave_path = plot_extended_wave(gaps, prediction.predicted_gaps)
+    print(f"\nWrote {wave_path}")
+
+    prime_pool = sieve_primes(200)
+    zones = spectral_candidate_zones(gaps, args.predict_steps, FIRST_50_PRIMES[-1], prime_pool)
+    print("\nCandidate zones (ranked by spectral power fraction retained):")
+    for zone in zones:
+        primes_str = ", ".join(str(p) for p in zone.nearest_primes)
+        print(
+            f"  top-{zone.frequencies_used} frequencies (power fraction {zone.power_fraction:.1%}): "
+            f"nearest primes [{primes_str}], mean distance from raw candidate {zone.distances.mean():.2f}"
+        )
 
     if args.hardware:
         print()
