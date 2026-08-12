@@ -51,6 +51,7 @@ not asserted as pass/fail.
 from __future__ import annotations
 
 import argparse
+import time
 import warnings
 from dataclasses import dataclass
 from datetime import datetime
@@ -538,6 +539,47 @@ class PrimeCandidate:
     distances: np.ndarray
 
 
+def _candidate_zones_from_spectrum(
+    spectrum: np.ndarray,
+    n: int,
+    known_length: int,
+    n_predict: int,
+    start_prime: int,
+    prime_pool: list[int],
+    max_levels: int = 5,
+) -> list[PrimeCandidate]:
+    """Shared zone-sweep core: rank `spectrum`'s frequency components (`n` bins) by
+    Parseval power, then reconstruct at truncation levels 1..max_levels via
+    `_dft_reconstruct` directly, evaluated from `known_length` onward (the true number
+    of known gaps -- may differ from `n` when `spectrum` came from a padded quantum
+    register). Used by `spectral_candidate_zones` (classical/quantum) and
+    `hardware_informed_candidate_zones` (hybrid) alike, so all three read the same way.
+    """
+    ranked = _ranked_frequency_components(spectrum, n)
+    total_power = float(sum(power for _, power in ranked))
+    future_t = np.arange(known_length, known_length + n_predict)
+
+    zones = []
+    for level in range(1, min(max_levels, len(ranked)) + 1):
+        kept_power = float(sum(power for _, power in ranked[:level]))
+        power_fraction = kept_power / total_power if total_power > 0 else 0.0
+        predicted_gaps = _dft_reconstruct(spectrum, n, future_t, top_k=level)
+        raw_candidates = start_prime + np.cumsum(predicted_gaps)
+        nearest_primes = [min(prime_pool, key=lambda c: abs(c - raw)) for raw in raw_candidates]
+        distances = np.abs(np.array(nearest_primes) - raw_candidates)
+        zones.append(
+            PrimeCandidate(
+                frequencies_used=level,
+                power_fraction=power_fraction,
+                predicted_gaps=predicted_gaps,
+                raw_candidates=raw_candidates,
+                nearest_primes=nearest_primes,
+                distances=distances,
+            )
+        )
+    return zones
+
+
 def spectral_candidate_zones(
     values: np.ndarray,
     n_predict: int,
@@ -561,34 +603,41 @@ def spectral_candidate_zones(
     if n_qubits is None:
         n = len(values)
         spectrum = np.fft.fft(values)
-        extrapolate = lambda level: fourier_extrapolate(values, n_predict, top_k=level)  # noqa: E731
     else:
         n = 2**n_qubits
         spectrum = quantum_fft(values, n_qubits)
-        extrapolate = lambda level: quantum_fourier_extrapolate(values, n_predict, n_qubits, top_k=level)  # noqa: E731
+    return _candidate_zones_from_spectrum(spectrum, n, len(values), n_predict, start_prime, prime_pool, max_levels)
 
-    ranked = _ranked_frequency_components(spectrum, n)
-    total_power = float(sum(power for _, power in ranked))
 
-    zones = []
-    for level in range(1, min(max_levels, len(ranked)) + 1):
-        kept_power = float(sum(power for _, power in ranked[:level]))
-        power_fraction = kept_power / total_power if total_power > 0 else 0.0
-        predicted_gaps = extrapolate(level)
-        raw_candidates = start_prime + np.cumsum(predicted_gaps)
-        nearest_primes = [min(prime_pool, key=lambda c: abs(c - raw)) for raw in raw_candidates]
-        distances = np.abs(np.array(nearest_primes) - raw_candidates)
-        zones.append(
-            PrimeCandidate(
-                frequencies_used=level,
-                power_fraction=power_fraction,
-                predicted_gaps=predicted_gaps,
-                raw_candidates=raw_candidates,
-                nearest_primes=nearest_primes,
-                distances=distances,
-            )
-        )
-    return zones
+def hardware_informed_candidate_zones(
+    hardware_probabilities: np.ndarray,
+    sim_statevector: np.ndarray,
+    norm: float,
+    n_qubits: int,
+    known_length: int,
+    n_predict: int,
+    start_prime: int,
+    prime_pool: list[int],
+    max_levels: int = 5,
+) -> list[PrimeCandidate]:
+    """NOT a full hardware reconstruction of the candidate zones -- a clearly-labeled
+    hybrid. A single Sampler measurement only yields Born-rule probabilities
+    (magnitude squared); phase is destroyed by measurement and recovering it would
+    need full state tomography (multiple non-commuting measurement bases, exponential
+    in qubit count), out of scope for one run. This combines the *magnitude* actually
+    measured on hardware (`sqrt(hardware_probabilities)`, so it does carry real
+    hardware noise) with the *phase* from the noiseless simulator (unmeasured, assumed
+    ideal) to see what magnitude-only noise alone does to the candidate zones. It says
+    nothing about phase noise, which this circuit cannot measure at all -- report this
+    everywhere as "magnitude-from-hardware / phase-from-simulator hybrid," never as an
+    unqualified hardware result.
+    """
+    dim = 2**n_qubits
+    hybrid_amplitudes = np.sqrt(hardware_probabilities) * np.exp(1j * np.angle(sim_statevector))
+    hybrid_spectrum = hybrid_amplitudes * norm * np.sqrt(dim)
+    return _candidate_zones_from_spectrum(
+        hybrid_spectrum, dim, known_length, n_predict, start_prime, prime_pool, max_levels
+    )
 
 
 @dataclass
@@ -660,30 +709,115 @@ def backward_verify_quantum(n_qubits: int, top_k: int | None = None, n_predict: 
     )
 
 
-def run_on_hardware(circuit: QuantumCircuit, backend_name: str | None, shots: int) -> tuple[dict[str, int], str]:
-    """Transpile `circuit` (with measurements) for a real IBM Quantum backend and
-    run it via the Sampler primitive, returning (bitstring -> count, backend name).
+@dataclass
+class HardwareRunMetadata:
+    backend_name: str
+    job_id: str
+    pending_jobs: int
+    shots: int
+    transpiled_depth: int
+    transpiled_gate_count: int
+    mitigation_applied: bool
+    queue_wait_seconds: float | None
+    wall_seconds: float
+
+
+# Below this queue depth (pending jobs on the selected backend), the adaptive shot
+# policy uses the full 4096 shots; at or above it, 1024, to avoid adding to a long
+# queue for a shot count beyond what "queue time allows" -- pending_jobs is the only
+# pre-submission queue signal the API exposes, there's no direct wait-time estimate.
+ADAPTIVE_SHOTS_QUEUE_THRESHOLD = 5
+ADAPTIVE_SHOTS_LOW_QUEUE = 4096
+ADAPTIVE_SHOTS_HIGH_QUEUE = 1024
+
+# Qiskit transpiles a fixed circuit down to a backend's native gate set and coupling
+# map; past this depth, accumulated gate noise tends to dominate the signal on current
+# hardware -- flagged as a warning, not a hard stop, since the run still proceeds and
+# the noise level is exactly what's being measured.
+TRANSPILED_DEPTH_WARNING_THRESHOLD = 50
+
+
+def run_on_hardware(
+    circuit: QuantumCircuit, backend_name: str | None, shots: int | None
+) -> tuple[dict[str, int], HardwareRunMetadata]:
+    """Transpile `circuit` (with measurements) for a real IBM Quantum backend and run
+    it via the Sampler primitive with readout error mitigation (measurement twirling)
+    enabled, returning (bitstring -> count, run metadata).
 
     Needs IBM Quantum credentials: either the QISKIT_IBM_TOKEN environment
     variable (see README.md for how to set it), or an account already saved
     locally via QiskitRuntimeService.save_account(channel=..., token=...).
+
+    `shots=None` uses the adaptive policy (see `ADAPTIVE_SHOTS_QUEUE_THRESHOLD`);
+    an explicit shot count is used exactly as given.
     """
     from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2
 
     service = QiskitRuntimeService()
     backend = service.backend(backend_name) if backend_name else service.least_busy(min_num_qubits=circuit.num_qubits)
-    print(f"Running on hardware backend: {backend.name}")
+    pending_jobs = backend.status().pending_jobs
+    print(f"Selected backend: {backend.name} (queue depth: {pending_jobs} pending jobs)")
+
+    if shots is None:
+        shots = ADAPTIVE_SHOTS_LOW_QUEUE if pending_jobs <= ADAPTIVE_SHOTS_QUEUE_THRESHOLD else ADAPTIVE_SHOTS_HIGH_QUEUE
+        _log_event(
+            f"--shots not given: queue depth {pending_jobs} <= {ADAPTIVE_SHOTS_QUEUE_THRESHOLD} threshold, "
+            f"using {shots} shots"
+            if pending_jobs <= ADAPTIVE_SHOTS_QUEUE_THRESHOLD
+            else f"--shots not given: queue depth {pending_jobs} > {ADAPTIVE_SHOTS_QUEUE_THRESHOLD} threshold, "
+            f"using {shots} shots to limit added queue load"
+        )
+    print(f"Shots: {shots}")
 
     measured = circuit.copy()
     measured.measure_all()
     transpiled = transpile(measured, backend=backend, optimization_level=3)
+    transpiled_depth = transpiled.depth()
+    transpiled_gate_count = transpiled.size()
+    print(f"Transpiled circuit: depth {transpiled_depth}, {transpiled_gate_count} gates")
+    if transpiled_depth > TRANSPILED_DEPTH_WARNING_THRESHOLD:
+        _log_event(
+            f"WARNING: transpiled depth {transpiled_depth} exceeds the "
+            f"{TRANSPILED_DEPTH_WARNING_THRESHOLD}-gate threshold -- deep circuits accumulate noise fast, "
+            "expect the hardware distribution to diverge more from the simulated one."
+        )
 
     sampler = SamplerV2(mode=backend)
+    sampler.options.twirling.enable_measure = True
+    mitigation_applied = True
+    _log_event("Readout error mitigation: measurement twirling enabled (no added circuit depth).")
+
+    start = time.monotonic()
     job = sampler.run([transpiled], shots=shots)
-    print(f"Submitted job {job.job_id()}, waiting for results...")
+    job_id = job.job_id()
+    print(f"Submitted job {job_id}, waiting for results...")
     result = job.result()
+    wall_seconds = time.monotonic() - start
+
+    queue_wait_seconds = None
+    try:
+        timestamps = job.metrics().get("timestamps", {})
+        created, running = timestamps.get("created"), timestamps.get("running")
+        if created and running:
+            queue_wait_seconds = (
+                datetime.fromisoformat(running) - datetime.fromisoformat(created)
+            ).total_seconds()
+    except Exception as exc:  # noqa: BLE001 -- best-effort metadata, must never lose the actual results
+        _log_event(f"Could not determine queue wait time from job.metrics() ({exc}); wall time reported instead.")
+
     counts = result[0].data.meas.get_counts()
-    return dict(counts), backend.name
+    metadata = HardwareRunMetadata(
+        backend_name=backend.name,
+        job_id=job_id,
+        pending_jobs=pending_jobs,
+        shots=shots,
+        transpiled_depth=transpiled_depth,
+        transpiled_gate_count=transpiled_gate_count,
+        mitigation_applied=mitigation_applied,
+        queue_wait_seconds=queue_wait_seconds,
+        wall_seconds=wall_seconds,
+    )
+    return dict(counts), metadata
 
 
 def plot_gap_sequence(gaps: np.ndarray) -> Path:
@@ -813,6 +947,77 @@ def plot_hardware_overlay(
     return path
 
 
+def plot_hardware_amplitude_landscape(hardware_probabilities: np.ndarray, n_qubits: int, backend_name: str) -> Path:
+    """The hardware-measured probability distribution alone, the hardware equivalent
+    of the simulated statevector's amplitude landscape (magnitude only -- hardware
+    measurement gives no phase)."""
+    dim = 2**n_qubits
+    fig, ax = plt.subplots(figsize=(9, 4))
+    ax.bar(range(dim), hardware_probabilities, color="tab:red")
+    ax.set_xlabel("computational basis state index")
+    ax.set_ylabel("probability")
+    ax.set_title(f"Amplitude landscape after QFT -- QUANTUM HARDWARE ({backend_name}, {n_qubits} qubits, {dim} basis states)")
+    fig.tight_layout()
+    path = OUTPUT_DIR / "hardware_amplitude_landscape.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
+def plot_hardware_vs_sim_comparison(
+    sim_probabilities: np.ndarray, hardware_probabilities: np.ndarray, n_qubits: int, backend_name: str
+) -> Path:
+    """Simulated and hardware amplitude landscapes as two side-by-side panels (not
+    overlaid bars) sharing the same y-axis scale, so the gap between them -- the noise
+    floor -- is directly visible as a shape difference between the two panels."""
+    dim = 2**n_qubits
+    shared_ylim = max(sim_probabilities.max(), hardware_probabilities.max()) * 1.1
+
+    fig, (ax_sim, ax_hw) = plt.subplots(1, 2, figsize=(12, 4.5), sharey=True)
+    ax_sim.bar(range(dim), sim_probabilities, color="tab:blue")
+    ax_sim.set_title("Simulated")
+    ax_sim.set_xlabel("computational basis state index")
+    ax_sim.set_ylabel("probability")
+    ax_sim.set_ylim(0, shared_ylim)
+
+    ax_hw.bar(range(dim), hardware_probabilities, color="tab:red")
+    ax_hw.set_title(f"Quantum hardware ({backend_name})")
+    ax_hw.set_xlabel("computational basis state index")
+    ax_hw.set_ylim(0, shared_ylim)
+
+    fig.suptitle("Amplitude landscape: simulated vs. hardware (same axis scale -- the gap is the noise floor)")
+    fig.tight_layout()
+    path = OUTPUT_DIR / "hardware_vs_sim_comparison.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
+def plot_hardware_frequency_portrait(
+    sim_probabilities: np.ndarray, hardware_probabilities: np.ndarray, n_qubits: int
+) -> Path:
+    """Frequency portrait (same fftshift re-centering as `plot_frequency_portrait`)
+    with simulated and hardware distributions overlaid on one axes, so it's visible
+    directly which peaks survive hardware noise and which collapse into it."""
+    dim = 2**n_qubits
+    freqs = np.fft.fftshift(np.fft.fftfreq(dim, d=1.0)) * dim
+    shifted_sim = np.fft.fftshift(sim_probabilities)
+    shifted_hw = np.fft.fftshift(hardware_probabilities)
+
+    fig, ax = plt.subplots(figsize=(9, 4))
+    ax.plot(freqs, shifted_sim, marker="o", color="tab:green", label="simulated")
+    ax.plot(freqs, shifted_hw, marker="o", color="tab:red", alpha=0.8, label="quantum hardware")
+    ax.set_xlabel("frequency bin")
+    ax.set_ylabel("probability")
+    ax.set_title("Frequency portrait of the prime gap wave -- simulated vs. hardware")
+    ax.legend()
+    fig.tight_layout()
+    path = OUTPUT_DIR / "hardware_frequency_portrait.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
 def _zone_table(zones: list[PrimeCandidate]) -> str:
     lines = ["| Frequencies kept | Power fraction | Nearest primes | Mean distance |", "|---:|---:|---|---:|"]
     for zone in zones:
@@ -915,6 +1120,103 @@ forecast for comparison:
     return path
 
 
+def write_hardware_report(
+    args: argparse.Namespace,
+    metadata: HardwareRunMetadata,
+    hardware_probabilities: np.ndarray,
+    sim_probabilities: np.ndarray,
+    zones_classical: list[PrimeCandidate],
+    zones_quantum_sim: list[PrimeCandidate],
+    zones_hybrid: list[PrimeCandidate],
+    png_paths: list[tuple[Path, str]],
+) -> Path:
+    """Write `output/7QUBIT_HW_RESULTS.md` -- called once the prediction circuit's
+    real hardware run completes. Overwritten on every hardware run; prior results live
+    in git history, not accumulated here."""
+    hardware_mae = float(np.mean(np.abs(hardware_probabilities - sim_probabilities)))
+    queue_wait_str = (
+        f"{metadata.queue_wait_seconds:.1f}s" if metadata.queue_wait_seconds is not None
+        else f"unavailable from job.metrics() -- wall time (submission to result) was {metadata.wall_seconds:.1f}s instead"
+    )
+    depth_note = (
+        f" (exceeds the {TRANSPILED_DEPTH_WARNING_THRESHOLD}-gate warning threshold)"
+        if metadata.transpiled_depth > TRANSPILED_DEPTH_WARNING_THRESHOLD
+        else ""
+    )
+
+    classical_beats_hybrid = zones_classical[-1].distances.mean() > zones_hybrid[-1].distances.mean()
+    zones_answer = (
+        "The rigorous comparison (simulated quantum vs. classical, both noiseless) is in "
+        "`7QUBIT_QUANTUM_PREDICTION.md`. For the hardware-noise-specific question: full hardware "
+        "candidate zones cannot be computed from a single measurement setting -- Sampler destroys phase, "
+        "and `_dft_reconstruct` needs it; recovering it would need full state tomography, out of scope "
+        "for this run. The magnitude-from-hardware/phase-from-simulator hybrid below answers only the "
+        "narrower question of whether *readout noise alone* moves the zones -- "
+        f"at max frequencies kept, the hybrid's mean nearest-prime distance is "
+        f"{zones_hybrid[-1].distances.mean():.2f} vs. classical's {zones_classical[-1].distances.mean():.2f} "
+        f"({'closer to actual primes than classical' if classical_beats_hybrid else 'not closer than classical'} "
+        "under this magnitude-only noise slice -- NOT a statement about the full hardware-noise question, "
+        "which needs tomography to answer properly)."
+    )
+
+    png_table = "\n".join(f"| `{path.name}` | {pathway} |" for path, pathway in png_paths)
+    events_section = "\n".join(f"- {event}" for event in RUN_EVENTS) if RUN_EVENTS else "- None."
+
+    content = f"""# Quantum prime gap prediction -- real hardware run report
+
+Generated automatically by `quantum_prime_gaps.py --hardware` when the prediction
+circuit's hardware job completes. Overwritten on every hardware run -- prior results
+live in git history, not accumulated here.
+
+- **Timestamp:** {datetime.now().isoformat(timespec="seconds")}
+- **Backend:** {metadata.backend_name} (selected dynamically via `least_busy`, not hardcoded)
+- **Job ID:** {metadata.job_id}
+- **Queue depth at selection:** {metadata.pending_jobs} pending jobs
+- **Shots used:** {metadata.shots}
+- **Transpiled circuit depth:** {metadata.transpiled_depth}{depth_note}
+- **Transpiled gate count:** {metadata.transpiled_gate_count}
+- **Readout error mitigation applied:** {"Yes (measurement twirling)" if metadata.mitigation_applied else "No"}
+- **Queue wait time:** {queue_wait_str}
+
+## Hardware vs. simulated amplitude landscape
+
+**Mean absolute difference (hardware vs. simulated probability per basis state):**
+{hardware_mae:.5f} -- this is the noise floor: on a noiseless simulator this would be
+exactly 0, so this number *is* the measurable effect of real hardware noise on the
+prediction circuit's readout.
+
+## Candidate zones under hardware noise
+
+{zones_answer}
+
+### Candidate zones -- classical (numpy FFT, noiseless, for reference)
+
+{_zone_table(zones_classical)}
+
+### Candidate zones -- quantum circuit (noiseless simulator, for reference)
+
+{_zone_table(zones_quantum_sim)}
+
+### Candidate zones -- magnitude-from-hardware / phase-from-simulator HYBRID (NOT a full hardware reconstruction)
+
+{_zone_table(zones_hybrid)}
+
+## Outputs from this run
+
+| PNG file | Pathway that produced it |
+|---|---|
+{png_table}
+
+## Console warnings / notable events during this run
+
+{events_section}
+"""
+
+    path = OUTPUT_DIR / "7QUBIT_HW_RESULTS.md"
+    path.write_text(content)
+    return path
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -932,7 +1234,14 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--hardware", action="store_true", help="run the encoded circuit on real IBM Quantum hardware")
     parser.add_argument("--backend", type=str, default=None, help="IBM backend name (default: least busy)")
-    parser.add_argument("--shots", type=int, default=4096, help="shots for hardware execution (default: 4096)")
+    parser.add_argument(
+        "--shots",
+        type=int,
+        default=None,
+        help="shots for hardware execution (default: adaptive -- "
+        f"{ADAPTIVE_SHOTS_LOW_QUEUE} if the selected backend's queue is shallow, "
+        f"{ADAPTIVE_SHOTS_HIGH_QUEUE} if it's deep)",
+    )
     return parser.parse_args()
 
 
@@ -1099,40 +1408,101 @@ def main() -> None:
 
         if args.hardware:
             print()
-            counts, backend_name = run_on_hardware(circuit, args.backend, args.shots)
+            counts, landscape_hw_meta = run_on_hardware(circuit, args.backend, args.shots)
             total = sum(counts.values())
-            print(f"Top 10 measured bitstrings out of {total} shots (landscape circuit):")
+            print(f"Job {landscape_hw_meta.job_id}, top 10 measured bitstrings out of {total} shots (landscape circuit):")
             for bitstring, count in sorted(counts.items(), key=lambda kv: -kv[1])[:10]:
                 print(f"  {bitstring}: {count} ({count / total:.1%})")
-            overlay_path = plot_hardware_overlay(probabilities, counts, args.qubits, backend_name)
+            overlay_path = plot_hardware_overlay(probabilities, counts, args.qubits, landscape_hw_meta.backend_name)
             print(f"\nWrote {overlay_path}")
             png_paths.append((overlay_path, "landscape circuit vs. real IBM hardware"))
 
             _log_event(
-                "--hardware set: the prediction circuit was also submitted to hardware, but its measured "
-                "output is Born-rule probabilities only (no phase) -- the prediction MAE/candidates above "
-                "still come from the noiseless simulator regardless; recovering phase from hardware would "
-                "need full state tomography, out of scope."
+                "--hardware set: the prediction circuit is also submitted to hardware, but its measured "
+                "output is Born-rule probabilities only (no phase) -- the prediction MAE/candidates reported "
+                "above still come from the noiseless simulator regardless; recovering phase from hardware "
+                "would need full state tomography, out of scope."
             )
-            prediction_normalized, _ = amplitude_encode(gaps, args.qubits)
+            prediction_normalized, prediction_norm = amplitude_encode(gaps, args.qubits)
             prediction_circuit = build_amplitude_circuit(prediction_normalized)
             prediction_circuit.append(QFTGate(args.qubits).inverse(), range(args.qubits))
-            prediction_sim_probs = Statevector(prediction_circuit).probabilities()
-            pred_counts, pred_backend_name = run_on_hardware(prediction_circuit, args.backend, args.shots)
+            prediction_sim_statevector = Statevector(prediction_circuit).data
+            prediction_sim_probs = np.abs(prediction_sim_statevector) ** 2
+
+            print(f"\nSubmitting the prediction circuit ({args.qubits} qubits) to real IBM Quantum hardware...")
+            pred_counts, pred_hw_meta = run_on_hardware(prediction_circuit, args.backend, args.shots)
             pred_total = sum(pred_counts.values())
-            print(f"\nTop 10 measured bitstrings out of {pred_total} shots (prediction circuit):")
+            print(
+                f"\n*** JOB ID: {pred_hw_meta.job_id} *** backend: {pred_hw_meta.backend_name}, "
+                f"shots: {pred_hw_meta.shots}, transpiled depth: {pred_hw_meta.transpiled_depth}, "
+                f"mitigation: {pred_hw_meta.mitigation_applied}"
+            )
+            print(f"Top 10 measured bitstrings out of {pred_total} shots (prediction circuit):")
             for bitstring, count in sorted(pred_counts.items(), key=lambda kv: -kv[1])[:10]:
                 print(f"  {bitstring}: {count} ({count / pred_total:.1%})")
-            pred_overlay_path = plot_hardware_overlay(
-                prediction_sim_probs, pred_counts, args.qubits, pred_backend_name, label="prediction"
+
+            hardware_probabilities = hardware_counts_to_probabilities(pred_counts, args.qubits)
+            hardware_mae = float(np.mean(np.abs(hardware_probabilities - prediction_sim_probs)))
+            print(f"\nHardware vs. simulated amplitude-landscape MAE (the noise floor): {hardware_mae:.5f}")
+
+            hw_landscape_path = plot_hardware_amplitude_landscape(
+                hardware_probabilities, args.qubits, pred_hw_meta.backend_name
             )
-            print(f"Wrote {pred_overlay_path}")
-            png_paths.append((pred_overlay_path, "prediction circuit vs. real IBM hardware (probabilities only)"))
+            hw_comparison_path = plot_hardware_vs_sim_comparison(
+                prediction_sim_probs, hardware_probabilities, args.qubits, pred_hw_meta.backend_name
+            )
+            hw_portrait_path = plot_hardware_frequency_portrait(prediction_sim_probs, hardware_probabilities, args.qubits)
+            print(f"Wrote {hw_landscape_path}")
+            print(f"Wrote {hw_comparison_path}")
+            print(f"Wrote {hw_portrait_path}")
+
+            zones_hybrid = hardware_informed_candidate_zones(
+                hardware_probabilities,
+                prediction_sim_statevector,
+                prediction_norm,
+                args.qubits,
+                len(gaps),
+                args.predict_steps,
+                FIRST_50_PRIMES[-1],
+                prime_pool,
+            )
+            print(
+                "\nCandidate zones, magnitude-from-hardware/phase-from-simulator HYBRID "
+                "(NOT a full hardware reconstruction -- see report for why):"
+            )
+            for zone in zones_hybrid:
+                primes_str = ", ".join(str(p) for p in zone.nearest_primes)
+                print(
+                    f"  top-{zone.frequencies_used} frequencies (power fraction {zone.power_fraction:.1%}): "
+                    f"nearest primes [{primes_str}], mean distance from raw candidate {zone.distances.mean():.2f}"
+                )
+
+            hw_png_paths = [
+                (hw_landscape_path, "prediction circuit, hardware only"),
+                (hw_comparison_path, "prediction circuit, simulated + hardware side by side"),
+                (hw_portrait_path, "prediction circuit, simulated + hardware overlay"),
+            ]
+
+            for w in caught:
+                _log_event(f"Warning: {warnings.formatwarning(w.message, w.category, w.filename, w.lineno).strip()}")
+
+            hw_report_path = write_hardware_report(
+                args,
+                pred_hw_meta,
+                hardware_probabilities,
+                prediction_sim_probs,
+                zones_classical,
+                zones_quantum,
+                zones_hybrid,
+                hw_png_paths,
+            )
+            print(f"\nWrote {hw_report_path}")
         else:
             _log_event("--hardware not set: all pathways ran on the noiseless statevector simulator only.")
 
-        for w in caught:
-            _log_event(f"Warning: {warnings.formatwarning(w.message, w.category, w.filename, w.lineno).strip()}")
+        if not args.hardware:
+            for w in caught:
+                _log_event(f"Warning: {warnings.formatwarning(w.message, w.category, w.filename, w.lineno).strip()}")
 
         report_path = write_results_report(
             args,

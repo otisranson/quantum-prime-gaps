@@ -1,49 +1,31 @@
-# Quantum prime gap prediction -- run report
+# Quantum prime gap prediction -- real hardware run report
 
-Generated automatically by `quantum_prime_gaps.py` at the end of every run -- this
-file is overwritten each time, it does not accumulate history (see `NOTES.md` and
-`6QUBIT_RESULTS.md` in this directory for hand-written point-in-time snapshots).
+Generated automatically by `quantum_prime_gaps.py --hardware` when the prediction
+circuit's hardware job completes. Overwritten on every hardware run -- prior results
+live in git history, not accumulated here.
 
 - **Timestamp:** 2026-08-11T21:28:12
-- **Qubits (`--qubits`):** 7 (dim = 128, shared by the landscape/portrait and prediction pathways)
-- **Effective top-k for the paired backward-verification comparison:** 5
-- **`--hardware` used this run:** Yes
+- **Backend:** ibm_kingston (selected dynamically via `least_busy`, not hardcoded)
+- **Job ID:** d9tso90u5hac73agdrk0
+- **Queue depth at selection:** 0 pending jobs
+- **Shots used:** 4096
+- **Transpiled circuit depth:** 907 (exceeds the 50-gate warning threshold)
+- **Transpiled gate count:** 1542
+- **Readout error mitigation applied:** Yes (measurement twirling)
+- **Queue wait time:** 0.9s
 
-## Classical vs. quantum backward verification
+## Hardware vs. simulated amplitude landscape
 
-Predicting gaps 40-49 (i.e. primes 41-50) from only the first 40 primes' 39 known
-gaps, both pathways run at the SAME `top_k` above so the comparison isolates the
-pathway itself (numpy FFT vs. an actual Qiskit `QFTGate`), not a differing truncation
-assumption.
+**Mean absolute difference (hardware vs. simulated probability per basis state):**
+0.00989 -- this is the noise floor: on a noiseless simulator this would be
+exactly 0, so this number *is* the measurable effect of real hardware noise on the
+prediction circuit's readout.
 
-| Pathway | MAE | Baseline (mean gap) | Baseline (repeat last) | Beats both baselines? |
-|---|---:|---:|---:|:---:|
-| Classical (numpy FFT) | 4.7128 | 3.2769 | 3.6000 | False |
-| Quantum (Qiskit circuit) | 4.7220 | 3.2769 | 3.6000 | False |
+## Candidate zones under hardware noise
 
-**Absolute MAE difference:** 0.009262
+The rigorous comparison (simulated quantum vs. classical, both noiseless) is in `7QUBIT_QUANTUM_PREDICTION.md`. For the hardware-noise-specific question: full hardware candidate zones cannot be computed from a single measurement setting -- Sampler destroys phase, and `_dft_reconstruct` needs it; recovering it would need full state tomography, out of scope for this run. The magnitude-from-hardware/phase-from-simulator hybrid below answers only the narrower question of whether *readout noise alone* moves the zones -- at max frequencies kept, the hybrid's mean nearest-prime distance is 0.96 vs. classical's 1.35 (closer to actual primes than classical under this magnitude-only noise slice -- NOT a statement about the full hardware-noise question, which needs tomography to answer properly).
 
-**Verdict:** Quantum vs classical MAE differ by 0.0093 at matched top_k=5. This is NOT a sign-convention or rescaling bug -- that's separately proven to floating-point precision (~1e-13) by the "quantum_fft matches np.fft.fft on the zero-padded array" hard check above, which compares the two pathways' spectra bin-for-bin on the identical (padded) array. This MAE gap instead reflects that amplitude encoding's mandatory zero-padding (39 known gaps into a 128-slot register) dilutes spectral power across many more bins, so "top-5" selects a genuinely coarser, different set of frequencies than the classical path's native unpadded spectrum -- an inherent cost of quantum amplitude encoding onto a power-of-2 register, not a computational error.
-
-## Forward prediction (past gap 49, candidate primes from 229)
-
-Quantum-circuit forecast (primary, per this run's request) alongside the classical
-forecast for comparison:
-
-| Step | Classical predicted gap | Classical candidate | Quantum predicted gap | Quantum candidate |
-|---:|---:|---:|---:|---:|
-| 1 | 1.00 | 230.0 | 2.06 | 231.1 |
-| 2 | 2.00 | 232.0 | 2.63 | 233.7 |
-| 3 | 2.00 | 234.0 | 1.62 | 235.3 |
-| 4 | 4.00 | 238.0 | 1.49 | 236.8 |
-| 5 | 2.00 | 240.0 | 1.45 | 238.2 |
-| 6 | 4.00 | 244.0 | 0.45 | 238.7 |
-| 7 | 2.00 | 246.0 | 1.14 | 239.8 |
-| 8 | 4.00 | 250.0 | -0.08 | 239.7 |
-| 9 | 6.00 | 256.0 | 0.51 | 240.3 |
-| 10 | 2.00 | 258.0 | -0.05 | 240.2 |
-
-### Candidate zones -- classical (numpy FFT)
+### Candidate zones -- classical (numpy FFT, noiseless, for reference)
 
 | Frequencies kept | Power fraction | Nearest primes | Mean distance |
 |---:|---:|---|---:|
@@ -53,7 +35,7 @@ forecast for comparison:
 | 4 | 79.3% | 229, 233, 239, 241, 251, 257, 263, 263, 271, 271 | 1.68 |
 | 5 | 81.7% | 229, 233, 239, 241, 251, 257, 257, 263, 269, 271 | 1.35 |
 
-### Candidate zones -- quantum circuit
+### Candidate zones -- quantum circuit (noiseless simulator, for reference)
 
 | Frequencies kept | Power fraction | Nearest primes | Mean distance |
 |---:|---:|---|---:|
@@ -63,15 +45,23 @@ forecast for comparison:
 | 4 | 71.2% | 233, 233, 233, 239, 239, 239, 239, 241, 241, 241 | 1.03 |
 | 5 | 72.4% | 233, 233, 233, 239, 239, 239, 239, 239, 241, 241 | 1.13 |
 
+### Candidate zones -- magnitude-from-hardware / phase-from-simulator HYBRID (NOT a full hardware reconstruction)
+
+| Frequencies kept | Power fraction | Nearest primes | Mean distance |
+|---:|---:|---|---:|
+| 1 | 5.3% | 227, 227, 227, 227, 229, 229, 229, 229, 227, 227 | 0.44 |
+| 2 | 10.3% | 227, 227, 223, 227, 227, 229, 229, 229, 227, 227 | 0.82 |
+| 3 | 14.1% | 227, 223, 223, 223, 223, 227, 229, 229, 227, 223 | 0.66 |
+| 4 | 17.3% | 227, 223, 223, 223, 227, 229, 229, 229, 229, 227 | 0.83 |
+| 5 | 20.2% | 227, 223, 223, 227, 227, 229, 229, 229, 229, 227 | 0.96 |
+
 ## Outputs from this run
 
 | PNG file | Pathway that produced it |
 |---|---|
-| `gap_sequence.png` | raw data (neither pathway) |
-| `amplitude_landscape_sim.png` | landscape re-upload circuit (Qiskit simulator) |
-| `frequency_portrait_sim.png` | landscape re-upload circuit (Qiskit simulator) |
-| `extended_wave_predicted.png` | both -- classical and quantum series shown together, clearly labeled |
-| `amplitude_landscape_quantum_ibm_kingston.png` | landscape circuit vs. real IBM hardware |
+| `hardware_amplitude_landscape.png` | prediction circuit, hardware only |
+| `hardware_vs_sim_comparison.png` | prediction circuit, simulated + hardware side by side |
+| `hardware_frequency_portrait.png` | prediction circuit, simulated + hardware overlay |
 
 ## Console warnings / notable events during this run
 
