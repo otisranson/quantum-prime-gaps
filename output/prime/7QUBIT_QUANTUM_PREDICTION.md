@@ -4,10 +4,10 @@ Generated automatically by `quantum_prime_gaps.py` at the end of every run -- th
 file is overwritten each time, it does not accumulate history (see `NOTES.md` and
 `6QUBIT_RESULTS.md` in this directory for hand-written point-in-time snapshots).
 
-- **Timestamp:** 2026-08-11T21:58:05
+- **Timestamp:** 2026-08-12T10:46:26
 - **Qubits (`--qubits`):** 7 (dim = 128, shared by the landscape/portrait and prediction pathways)
 - **Effective top-k for the paired backward-verification comparison:** 5
-- **`--hardware` used this run:** Yes
+- **`--hardware` used this run:** No
 
 ## Classical vs. quantum backward verification
 
@@ -71,33 +71,10 @@ forecast for comparison:
 | `amplitude_landscape_sim.png` | landscape re-upload circuit (Qiskit simulator) |
 | `frequency_portrait_sim.png` | landscape re-upload circuit (Qiskit simulator) |
 | `extended_wave_predicted.png` | both -- classical and quantum series shown together, clearly labeled |
-| `amplitude_landscape_quantum_ibm_kingston.png` | landscape circuit vs. real IBM hardware |
 
 ## Console warnings / notable events during this run
 
 - --top-k not given: using top-5 for the paired backward-verification comparison below so classical and quantum are compared at the same truncation level (classical's own default elsewhere in this run is still "keep everything")
 - Quantum vs classical MAE differ by 0.0093 at matched top_k=5. This is NOT a sign-convention or rescaling bug -- that's separately proven to floating-point precision (~1e-13) by the "quantum_fft matches np.fft.fft on the zero-padded array" hard check above, which compares the two pathways' spectra bin-for-bin on the identical (padded) array. This MAE gap instead reflects that amplitude encoding's mandatory zero-padding (39 known gaps into a 128-slot register) dilutes spectral power across many more bins, so "top-5" selects a genuinely coarser, different set of frequencies than the classical path's native unpadded spectrum -- an inherent cost of quantum amplitude encoding onto a power-of-2 register, not a computational error.
 - quantum path: --top-k not given, defaulting to top-5 frequency components (a full-spectrum reconstruction of the zero-padded register would just reproduce the padding as "predicted" gaps)
-- --shots not given: queue depth 0 <= 5 threshold, using 4096 shots
-- WARNING: transpiled depth 590 exceeds the 50-gate threshold -- deep circuits accumulate noise fast, expect the hardware distribution to diverge more from the simulated one.
-- Readout error mitigation: measurement twirling enabled (no added circuit depth).
-- --hardware set: the prediction circuit is also submitted to hardware, but its measured output is Born-rule probabilities only (no phase) -- the prediction MAE/candidates reported above still come from the noiseless simulator regardless; recovering phase from hardware would need full state tomography, out of scope.
-- --shots not given: queue depth 0 <= 5 threshold, using 4096 shots
-- WARNING: transpiled depth 913 exceeds the 50-gate threshold -- deep circuits accumulate noise fast, expect the hardware distribution to diverge more from the simulated one.
-- Readout error mitigation: measurement twirling enabled (no added circuit depth).
-- Warning: /home/oranson/Projects/QuantumResearch/.venv/lib/python3.14/site-packages/stevedore/extension.py:338: DeprecationWarning: Since backends now support running jobs that contain both fractional gates and dynamic circuit, IBMFractionalTranslationPlugin is deprecated as of qiskit-ibm-runtime 0.42.0 and will be removed no sooner than 3 months after the release date. Use IBMDynamicFractionalTranslationPlugin instead.
-  obj = plugin(*invoke_args, **invoke_kwds)
-- Warning: /home/oranson/Projects/QuantumResearch/.venv/lib/python3.14/site-packages/stevedore/extension.py:338: DeprecationWarning: Since backends now support running jobs that contain both fractional gates and dynamic circuit, IBMFractionalTranslationPlugin is deprecated as of qiskit-ibm-runtime 0.42.0 and will be removed no sooner than 3 months after the release date. Use IBMDynamicFractionalTranslationPlugin instead.
-  obj = plugin(*invoke_args, **invoke_kwds)
-- Warning: /home/oranson/Projects/QuantumResearch/.venv/lib/python3.14/site-packages/stevedore/extension.py:338: DeprecationWarning: Since backends now support running jobs that contain both fractional gates and dynamic circuit, IBMFractionalTranslationPlugin is deprecated as of qiskit-ibm-runtime 0.42.0 and will be removed no sooner than 3 months after the release date. Use IBMDynamicFractionalTranslationPlugin instead.
-  obj = plugin(*invoke_args, **invoke_kwds)
-- Warning: /home/oranson/Projects/QuantumResearch/.venv/lib/python3.14/site-packages/stevedore/extension.py:338: DeprecationWarning: Since backends now support running jobs that contain both fractional gates and dynamic circuit, IBMFractionalTranslationPlugin is deprecated as of qiskit-ibm-runtime 0.42.0 and will be removed no sooner than 3 months after the release date. Use IBMDynamicFractionalTranslationPlugin instead.
-  obj = plugin(*invoke_args, **invoke_kwds)
-- --shots not given: queue depth 0 <= 5 threshold, using 4096 shots
-- WARNING: transpiled depth 908 exceeds the 50-gate threshold -- deep circuits accumulate noise fast, expect the hardware distribution to diverge more from the simulated one.
-- Readout error mitigation: measurement twirling enabled (no added circuit depth).
-- Dynamical decoupling enabled (sequence: XpXm) -- a server-side scheduling pass on idle windows, applied on top of the already-transpiled circuit; it will not change the locally measured transpiled depth printed above.
-- Warning: /home/oranson/Projects/QuantumResearch/.venv/lib/python3.14/site-packages/stevedore/extension.py:338: DeprecationWarning: Since backends now support running jobs that contain both fractional gates and dynamic circuit, IBMFractionalTranslationPlugin is deprecated as of qiskit-ibm-runtime 0.42.0 and will be removed no sooner than 3 months after the release date. Use IBMDynamicFractionalTranslationPlugin instead.
-  obj = plugin(*invoke_args, **invoke_kwds)
-- Warning: /home/oranson/Projects/QuantumResearch/.venv/lib/python3.14/site-packages/stevedore/extension.py:338: DeprecationWarning: Since backends now support running jobs that contain both fractional gates and dynamic circuit, IBMFractionalTranslationPlugin is deprecated as of qiskit-ibm-runtime 0.42.0 and will be removed no sooner than 3 months after the release date. Use IBMDynamicFractionalTranslationPlugin instead.
-  obj = plugin(*invoke_args, **invoke_kwds)
+- --hardware not set: all pathways ran on the noiseless statevector simulator only.

@@ -66,7 +66,7 @@ from qiskit.quantum_info import Statevector
 
 matplotlib.use("Agg")
 
-OUTPUT_DIR = Path(__file__).parent / "output"
+OUTPUT_DIR = Path(__file__).parent.parent / "output" / "prime"
 
 # Notable events for this run (top_k substitutions, hardware skip/execute decisions,
 # hard-check failures, any captured warnings) -- collected here so `write_results_report`
@@ -1168,7 +1168,7 @@ def write_results_report(
     zones_quantum: list[PrimeCandidate],
     png_paths: list[tuple[Path, str]],
 ) -> Path:
-    """Write `output/7QUBIT_QUANTUM_PREDICTION.md` summarizing this run -- called
+    """Write `output/prime/7QUBIT_QUANTUM_PREDICTION.md` summarizing this run -- called
     unconditionally at the end of every run, no manual documentation step. Overwritten
     every time the script runs, so it always reflects the most recent invocation.
     `mae_diff`/`verdict` are computed once in `main()` (and logged to `RUN_EVENTS`
@@ -1257,7 +1257,7 @@ def write_hardware_report(
     zones_hybrid: list[PrimeCandidate],
     png_paths: list[tuple[Path, str]],
 ) -> Path:
-    """Write `output/7QUBIT_HW_RESULTS.md` -- called once the prediction circuit's
+    """Write `output/prime/7QUBIT_HW_RESULTS.md` -- called once the prediction circuit's
     real hardware run completes. Overwritten on every hardware run; prior results live
     in git history, not accumulated here."""
     hardware_mae = float(np.mean(np.abs(hardware_probabilities - sim_probabilities)))
@@ -1355,7 +1355,7 @@ def write_hardware_dd_report(
     zones_dd_hybrid: list[PrimeCandidate],
     png_paths: list[tuple[Path, str]],
 ) -> Path:
-    """Write `output/7QUBIT_HW_DD_RESULTS.md` -- called once the dynamical-decoupling
+    """Write `output/prime/7QUBIT_HW_DD_RESULTS.md` -- called once the dynamical-decoupling
     hardware run completes. Overwritten on every DD run; prior results live in git
     history. "First hardware run" throughout is the historical job re-fetched by
     `fetch_first_hardware_run`, not a fresh re-run -- the only variable that changed is
