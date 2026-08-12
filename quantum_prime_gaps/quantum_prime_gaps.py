@@ -720,6 +720,7 @@ class HardwareRunMetadata:
     mitigation_applied: bool
     queue_wait_seconds: float | None
     wall_seconds: float
+    dynamical_decoupling: bool = False
 
 
 # Below this queue depth (pending jobs on the selected backend), the adaptive shot
@@ -736,20 +737,52 @@ ADAPTIVE_SHOTS_HIGH_QUEUE = 1024
 # the noise level is exactly what's being measured.
 TRANSPILED_DEPTH_WARNING_THRESHOLD = 50
 
+# Dynamical-decoupling sequence used when --dynamical-decoupling is set: cancels
+# dephasing noise during idle windows between gates via timed echo pulses. "XpXm" is
+# the sequence most effective against dephasing specifically (vs. "XX"/"XY4", which
+# target other noise channels) -- see DynamicalDecouplingOptions in qiskit-ibm-runtime.
+DD_SEQUENCE_TYPE = "XpXm"
+
+# The prediction-circuit job from the first hardware run, documented in
+# 7QUBIT_HW_RESULTS.md. Retrieved fresh via `fetch_first_hardware_run` for every DD
+# comparison rather than re-run, so "first hardware run" in that comparison is
+# literally that same measurement -- not a second, possibly hardware-drifted one.
+FIRST_HARDWARE_RUN_JOB_ID = "d9tso90u5hac73agdrk0"
+
+
+def fetch_first_hardware_run(n_qubits: int) -> np.ndarray:
+    """Retrieve the first hardware run's actual measured counts from IBM (a free,
+    read-only API call -- no quota cost) and return them as a probability array, so
+    every DD-vs-first-run comparison uses the exact original measurement."""
+    from qiskit_ibm_runtime import QiskitRuntimeService
+
+    service = QiskitRuntimeService()
+    job = service.job(FIRST_HARDWARE_RUN_JOB_ID)
+    result = job.result()
+    counts = dict(result[0].data.meas.get_counts())
+    return hardware_counts_to_probabilities(counts, n_qubits)
+
 
 def run_on_hardware(
-    circuit: QuantumCircuit, backend_name: str | None, shots: int | None
+    circuit: QuantumCircuit,
+    backend_name: str | None,
+    shots: int | None,
+    dynamical_decoupling: bool = False,
 ) -> tuple[dict[str, int], HardwareRunMetadata]:
     """Transpile `circuit` (with measurements) for a real IBM Quantum backend and run
     it via the Sampler primitive with readout error mitigation (measurement twirling)
-    enabled, returning (bitstring -> count, run metadata).
+    always enabled, returning (bitstring -> count, run metadata).
 
     Needs IBM Quantum credentials: either the QISKIT_IBM_TOKEN environment
     variable (see README.md for how to set it), or an account already saved
     locally via QiskitRuntimeService.save_account(channel=..., token=...).
 
     `shots=None` uses the adaptive policy (see `ADAPTIVE_SHOTS_QUEUE_THRESHOLD`);
-    an explicit shot count is used exactly as given.
+    an explicit shot count is used exactly as given. `dynamical_decoupling=True`
+    additionally enables DD (`DD_SEQUENCE_TYPE`) -- a server-side scheduling pass
+    applied to idle windows in the already-transpiled circuit, so it does NOT change
+    the locally-measured `transpiled_depth` below; that's expected, not a sign DD had
+    no effect.
     """
     from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2
 
@@ -786,6 +819,14 @@ def run_on_hardware(
     sampler.options.twirling.enable_measure = True
     mitigation_applied = True
     _log_event("Readout error mitigation: measurement twirling enabled (no added circuit depth).")
+    if dynamical_decoupling:
+        sampler.options.dynamical_decoupling.enable = True
+        sampler.options.dynamical_decoupling.sequence_type = DD_SEQUENCE_TYPE
+        _log_event(
+            f"Dynamical decoupling enabled (sequence: {DD_SEQUENCE_TYPE}) -- a server-side scheduling pass on "
+            "idle windows, applied on top of the already-transpiled circuit; it will not change the locally "
+            "measured transpiled depth printed above."
+        )
 
     start = time.monotonic()
     job = sampler.run([transpiled], shots=shots)
@@ -816,6 +857,7 @@ def run_on_hardware(
         mitigation_applied=mitigation_applied,
         queue_wait_seconds=queue_wait_seconds,
         wall_seconds=wall_seconds,
+        dynamical_decoupling=dynamical_decoupling,
     )
     return dict(counts), metadata
 
@@ -1013,6 +1055,91 @@ def plot_hardware_frequency_portrait(
     ax.legend()
     fig.tight_layout()
     path = OUTPUT_DIR / "hardware_frequency_portrait.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
+def plot_hardware_dd_amplitude_landscape(dd_probabilities: np.ndarray, n_qubits: int, backend_name: str) -> Path:
+    """The dynamical-decoupling hardware run's measured probability distribution alone
+    -- the DD-mitigated equivalent of `plot_hardware_amplitude_landscape`."""
+    dim = 2**n_qubits
+    fig, ax = plt.subplots(figsize=(9, 4))
+    ax.bar(range(dim), dd_probabilities, color="tab:orange")
+    ax.set_xlabel("computational basis state index")
+    ax.set_ylabel("probability")
+    ax.set_title(
+        f"Amplitude landscape after QFT -- QUANTUM HARDWARE + DYNAMICAL DECOUPLING "
+        f"({backend_name}, {n_qubits} qubits, {dim} basis states)"
+    )
+    fig.tight_layout()
+    path = OUTPUT_DIR / "hardware_dd_amplitude_landscape.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
+def plot_hardware_dd_vs_first_run_comparison(
+    sim_probabilities: np.ndarray,
+    first_hw_probabilities: np.ndarray,
+    dd_probabilities: np.ndarray,
+    n_qubits: int,
+    backend_name: str,
+) -> Path:
+    """Simulated, first hardware run (no DD), and DD hardware run as three side-by-side
+    panels sharing one y-axis scale -- the gap between the first-run and DD panels is
+    the mitigation effect, directly comparable to the gap between simulated and
+    first-run in `hardware_vs_sim_comparison.png`."""
+    dim = 2**n_qubits
+    shared_ylim = max(sim_probabilities.max(), first_hw_probabilities.max(), dd_probabilities.max()) * 1.1
+
+    fig, (ax_sim, ax_first, ax_dd) = plt.subplots(1, 3, figsize=(16, 4.5), sharey=True)
+    ax_sim.bar(range(dim), sim_probabilities, color="tab:blue")
+    ax_sim.set_title("Simulated")
+    ax_sim.set_xlabel("computational basis state index")
+    ax_sim.set_ylabel("probability")
+    ax_sim.set_ylim(0, shared_ylim)
+
+    ax_first.bar(range(dim), first_hw_probabilities, color="tab:red")
+    ax_first.set_title("First hardware run (no DD)")
+    ax_first.set_xlabel("computational basis state index")
+    ax_first.set_ylim(0, shared_ylim)
+
+    ax_dd.bar(range(dim), dd_probabilities, color="tab:orange")
+    ax_dd.set_title(f"Hardware + dynamical decoupling ({backend_name})")
+    ax_dd.set_xlabel("computational basis state index")
+    ax_dd.set_ylim(0, shared_ylim)
+
+    fig.suptitle("Amplitude landscape: simulated vs. first hardware run vs. dynamical decoupling (same axis scale)")
+    fig.tight_layout()
+    path = OUTPUT_DIR / "hardware_dd_vs_first_run_comparison.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
+def plot_hardware_dd_frequency_portrait(
+    sim_probabilities: np.ndarray, first_hw_probabilities: np.ndarray, dd_probabilities: np.ndarray, n_qubits: int
+) -> Path:
+    """Frequency portrait with simulated, first hardware run, and DD hardware run all
+    overlaid on one axes, so it's visible directly whether any frequency peaks lost in
+    the first run re-emerge under dynamical decoupling."""
+    dim = 2**n_qubits
+    freqs = np.fft.fftshift(np.fft.fftfreq(dim, d=1.0)) * dim
+    shifted_sim = np.fft.fftshift(sim_probabilities)
+    shifted_first = np.fft.fftshift(first_hw_probabilities)
+    shifted_dd = np.fft.fftshift(dd_probabilities)
+
+    fig, ax = plt.subplots(figsize=(9, 4))
+    ax.plot(freqs, shifted_sim, marker="o", color="tab:green", label="simulated")
+    ax.plot(freqs, shifted_first, marker="o", color="tab:red", alpha=0.7, label="first hardware run (no DD)")
+    ax.plot(freqs, shifted_dd, marker="o", color="tab:orange", alpha=0.7, label="hardware + dynamical decoupling")
+    ax.set_xlabel("frequency bin")
+    ax.set_ylabel("probability")
+    ax.set_title("Frequency portrait: simulated vs. first hardware run vs. dynamical decoupling")
+    ax.legend()
+    fig.tight_layout()
+    path = OUTPUT_DIR / "hardware_dd_frequency_portrait.png"
     fig.savefig(path, dpi=150)
     plt.close(fig)
     return path
@@ -1217,6 +1344,130 @@ prediction circuit's readout.
     return path
 
 
+def write_hardware_dd_report(
+    args: argparse.Namespace,
+    metadata: HardwareRunMetadata,
+    sim_probabilities: np.ndarray,
+    first_hw_probabilities: np.ndarray,
+    dd_probabilities: np.ndarray,
+    zones_classical: list[PrimeCandidate],
+    zones_first_hybrid: list[PrimeCandidate],
+    zones_dd_hybrid: list[PrimeCandidate],
+    png_paths: list[tuple[Path, str]],
+) -> Path:
+    """Write `output/7QUBIT_HW_DD_RESULTS.md` -- called once the dynamical-decoupling
+    hardware run completes. Overwritten on every DD run; prior results live in git
+    history. "First hardware run" throughout is the historical job re-fetched by
+    `fetch_first_hardware_run`, not a fresh re-run -- the only variable that changed is
+    whether DD was enabled."""
+    mae_sim_first = float(np.mean(np.abs(first_hw_probabilities - sim_probabilities)))
+    mae_sim_dd = float(np.mean(np.abs(dd_probabilities - sim_probabilities)))
+    mae_first_dd = float(np.mean(np.abs(dd_probabilities - first_hw_probabilities)))
+
+    depth_note = (
+        f" (exceeds the {TRANSPILED_DEPTH_WARNING_THRESHOLD}-gate warning threshold)"
+        if metadata.transpiled_depth > TRANSPILED_DEPTH_WARNING_THRESHOLD
+        else ""
+    )
+
+    first_hybrid_distance = zones_first_hybrid[-1].distances.mean()
+    dd_hybrid_distance = zones_dd_hybrid[-1].distances.mean()
+    classical_distance = zones_classical[-1].distances.mean()
+
+    mae_improved = mae_sim_dd < mae_sim_first
+    zones_improved = dd_hybrid_distance < first_hybrid_distance
+    verdict = (
+        f"MAE vs. simulated: first run {mae_sim_first:.5f}, DD run {mae_sim_dd:.5f} "
+        f"({'improved' if mae_improved else 'did not improve'} -- "
+        f"{'lower' if mae_improved else 'not lower'} means closer to the simulated distribution). "
+        f"Hybrid candidate-zone mean nearest-prime distance (max frequencies kept, magnitude-from-hardware/"
+        f"phase-from-simulator, same caveats as `7QUBIT_HW_RESULTS.md`): first run {first_hybrid_distance:.2f}, "
+        f"DD run {dd_hybrid_distance:.2f} ({'improved' if zones_improved else 'did not improve'} -- "
+        f"classical baseline is {classical_distance:.2f} for reference). "
+        + (
+            "Both signals moved the same direction: dynamical decoupling measurably recovered some signal "
+            "structure on this circuit."
+            if mae_improved and zones_improved
+            else "Neither signal improved: on this 907-gate circuit, dynamical decoupling did not measurably "
+            "recover signal structure -- plausible given DD only protects idle qubit time, and an "
+            "initialize()-heavy circuit at this depth likely keeps most qubits busy rather than idle, leaving "
+            "little idle time for DD to protect."
+            if not mae_improved and not zones_improved
+            else "The two signals disagree (one improved, one didn't) -- treat this as inconclusive rather than "
+            "a clean win or loss; the underlying amplitude landscape comparison plot is the more direct evidence "
+            "than either single summary number."
+        )
+    )
+
+    png_table = "\n".join(f"| `{path.name}` | {pathway} |" for path, pathway in png_paths)
+    events_section = "\n".join(f"- {event}" for event in RUN_EVENTS) if RUN_EVENTS else "- None."
+
+    content = f"""# Quantum prime gap prediction -- dynamical decoupling hardware run report
+
+Generated automatically by `quantum_prime_gaps.py --hardware --dynamical-decoupling`
+when the DD run completes. Overwritten on every DD run -- prior results live in git
+history. "First hardware run" below is job `{FIRST_HARDWARE_RUN_JOB_ID}`
+(documented in `7QUBIT_HW_RESULTS.md`), re-fetched fresh from IBM rather than re-run,
+so dynamical decoupling is the only variable that changed between the two.
+
+- **Timestamp:** {datetime.now().isoformat(timespec="seconds")}
+- **Backend:** {metadata.backend_name}
+- **DD job ID:** {metadata.job_id}
+- **Shots used:** {metadata.shots}
+- **Dynamical decoupling sequence:** {DD_SEQUENCE_TYPE}
+- **Transpiled circuit depth:** {metadata.transpiled_depth}{depth_note} -- NOTE: dynamical decoupling is a
+  server-side scheduling pass applied to idle windows in the already-transpiled circuit, so this number is
+  expected to match the first run's exactly; that is not evidence DD had no effect, it's the wrong metric
+  to look at for DD's effect (see the amplitude/MAE/candidate-zone comparisons below instead).
+- **Readout error mitigation:** {"Yes (measurement twirling, same as the first run)" if metadata.mitigation_applied else "No"}
+
+## Three-way amplitude landscape comparison
+
+| Comparison | MAE |
+|---|---:|
+| Simulated vs. first hardware run (no DD) | {mae_sim_first:.5f} |
+| Simulated vs. DD hardware run | {mae_sim_dd:.5f} |
+| First hardware run vs. DD hardware run | {mae_first_dd:.5f} |
+
+## Candidate zones: classical vs. first-run hybrid vs. DD-run hybrid
+
+Same magnitude-from-hardware/phase-from-simulator hybrid methodology as
+`7QUBIT_HW_RESULTS.md` (NOT a full hardware reconstruction -- phase is unmeasurable
+from a single Sampler setting; see that report for the full explanation), computed
+identically for both hardware runs so the comparison isolates DD.
+
+### Candidate zones -- classical (numpy FFT, noiseless, for reference)
+
+{_zone_table(zones_classical)}
+
+### Candidate zones -- first hardware run hybrid (no DD)
+
+{_zone_table(zones_first_hybrid)}
+
+### Candidate zones -- DD hardware run hybrid
+
+{_zone_table(zones_dd_hybrid)}
+
+## Verdict
+
+{verdict}
+
+## Outputs from this run
+
+| PNG file | Pathway that produced it |
+|---|---|
+{png_table}
+
+## Console warnings / notable events during this run
+
+{events_section}
+"""
+
+    path = OUTPUT_DIR / "7QUBIT_HW_DD_RESULTS.md"
+    path.write_text(content)
+    return path
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -1233,6 +1484,13 @@ def parse_args() -> argparse.Namespace:
         "(default: use all, i.e. assume the known 49-gap window is exactly one period)",
     )
     parser.add_argument("--hardware", action="store_true", help="run the encoded circuit on real IBM Quantum hardware")
+    parser.add_argument(
+        "--dynamical-decoupling",
+        action="store_true",
+        help="with --hardware, also submit a second prediction-circuit run with dynamical decoupling "
+        f"({DD_SEQUENCE_TYPE}) enabled, and compare it against the first hardware run (job "
+        f"{FIRST_HARDWARE_RUN_JOB_ID!r}) -- no-op without --hardware",
+    )
     parser.add_argument("--backend", type=str, default=None, help="IBM backend name (default: least busy)")
     parser.add_argument(
         "--shots",
@@ -1483,7 +1741,8 @@ def main() -> None:
                 (hw_portrait_path, "prediction circuit, simulated + hardware overlay"),
             ]
 
-            for w in caught:
+            warnings_logged_through = len(caught)
+            for w in caught[:warnings_logged_through]:
                 _log_event(f"Warning: {warnings.formatwarning(w.message, w.category, w.filename, w.lineno).strip()}")
 
             hw_report_path = write_hardware_report(
@@ -1497,8 +1756,103 @@ def main() -> None:
                 hw_png_paths,
             )
             print(f"\nWrote {hw_report_path}")
+
+            if args.dynamical_decoupling:
+                print(
+                    f"\nSubmitting a second prediction-circuit run with dynamical decoupling "
+                    f"({DD_SEQUENCE_TYPE}) enabled, for comparison against first-run job "
+                    f"{FIRST_HARDWARE_RUN_JOB_ID}..."
+                )
+                dd_backend = args.backend or "ibm_kingston"  # match the first run exactly, per this comparison's request
+                dd_counts, dd_hw_meta = run_on_hardware(
+                    prediction_circuit, dd_backend, args.shots, dynamical_decoupling=True
+                )
+                dd_total = sum(dd_counts.values())
+                print(
+                    f"\n*** DD JOB ID: {dd_hw_meta.job_id} *** backend: {dd_hw_meta.backend_name}, "
+                    f"shots: {dd_hw_meta.shots}, transpiled depth: {dd_hw_meta.transpiled_depth}, "
+                    f"DD sequence: {DD_SEQUENCE_TYPE}"
+                )
+                print(f"Top 10 measured bitstrings out of {dd_total} shots (DD run):")
+                for bitstring, count in sorted(dd_counts.items(), key=lambda kv: -kv[1])[:10]:
+                    print(f"  {bitstring}: {count} ({count / dd_total:.1%})")
+
+                dd_probabilities = hardware_counts_to_probabilities(dd_counts, args.qubits)
+                first_hw_probabilities = fetch_first_hardware_run(args.qubits)
+
+                mae_sim_first = float(np.mean(np.abs(first_hw_probabilities - prediction_sim_probs)))
+                mae_sim_dd = float(np.mean(np.abs(dd_probabilities - prediction_sim_probs)))
+                print(
+                    f"\nMAE vs. simulated -- first run: {mae_sim_first:.5f}, DD run: {mae_sim_dd:.5f} "
+                    f"({'improved' if mae_sim_dd < mae_sim_first else 'did not improve'})"
+                )
+
+                dd_landscape_path = plot_hardware_dd_amplitude_landscape(
+                    dd_probabilities, args.qubits, dd_hw_meta.backend_name
+                )
+                dd_comparison_path = plot_hardware_dd_vs_first_run_comparison(
+                    prediction_sim_probs, first_hw_probabilities, dd_probabilities, args.qubits, dd_hw_meta.backend_name
+                )
+                dd_portrait_path = plot_hardware_dd_frequency_portrait(
+                    prediction_sim_probs, first_hw_probabilities, dd_probabilities, args.qubits
+                )
+                print(f"Wrote {dd_landscape_path}")
+                print(f"Wrote {dd_comparison_path}")
+                print(f"Wrote {dd_portrait_path}")
+
+                zones_first_hybrid = hardware_informed_candidate_zones(
+                    first_hw_probabilities,
+                    prediction_sim_statevector,
+                    prediction_norm,
+                    args.qubits,
+                    len(gaps),
+                    args.predict_steps,
+                    FIRST_50_PRIMES[-1],
+                    prime_pool,
+                )
+                zones_dd_hybrid = hardware_informed_candidate_zones(
+                    dd_probabilities,
+                    prediction_sim_statevector,
+                    prediction_norm,
+                    args.qubits,
+                    len(gaps),
+                    args.predict_steps,
+                    FIRST_50_PRIMES[-1],
+                    prime_pool,
+                )
+                print(
+                    f"\nHybrid candidate-zone mean nearest-prime distance (max frequencies kept) -- "
+                    f"classical: {zones_classical[-1].distances.mean():.2f}, "
+                    f"first run: {zones_first_hybrid[-1].distances.mean():.2f}, "
+                    f"DD run: {zones_dd_hybrid[-1].distances.mean():.2f}"
+                )
+
+                dd_png_paths = [
+                    (dd_landscape_path, "prediction circuit, DD hardware run only"),
+                    (dd_comparison_path, "prediction circuit, simulated + first hardware run + DD hardware run"),
+                    (dd_portrait_path, "prediction circuit, simulated + first hardware run + DD hardware run overlay"),
+                ]
+
+                for w in caught[warnings_logged_through:]:
+                    _log_event(f"Warning: {warnings.formatwarning(w.message, w.category, w.filename, w.lineno).strip()}")
+                warnings_logged_through = len(caught)
+
+                dd_report_path = write_hardware_dd_report(
+                    args,
+                    dd_hw_meta,
+                    prediction_sim_probs,
+                    first_hw_probabilities,
+                    dd_probabilities,
+                    zones_classical,
+                    zones_first_hybrid,
+                    zones_dd_hybrid,
+                    dd_png_paths,
+                )
+                print(f"\nWrote {dd_report_path}")
         else:
             _log_event("--hardware not set: all pathways ran on the noiseless statevector simulator only.")
+            if args.dynamical_decoupling:
+                _log_event("--dynamical-decoupling was set without --hardware -- ignored, it has no effect without --hardware.")
 
         if not args.hardware:
             for w in caught:
