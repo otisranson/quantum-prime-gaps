@@ -213,7 +213,7 @@ class VerificationResult:
 
 
 def verify(gaps: np.ndarray, n_qubits: int, n_shuffles: int = 50, seed: int = 0) -> VerificationResult:
-    primes_match_sieve = FIRST_50_PRIMES == sieve_primes(50)
+    primes_match_sieve = sieve_primes(50) == FIRST_50_PRIMES
 
     angles = normalize_to_angles(gaps)
     qiskit_state = Statevector(build_full_circuit(angles, n_qubits)).data
@@ -400,7 +400,7 @@ def _ranked_frequency_components(spectrum: np.ndarray, n: int) -> list[tuple[tup
     "amplitude concentrates" in."""
     components = _frequency_components(n)
     powers = [sum(abs(spectrum[b]) ** 2 for b in bins) for bins in components]
-    return sorted(zip(components, powers), key=lambda cp: cp[1], reverse=True)
+    return sorted(zip(components, powers, strict=True), key=lambda cp: cp[1], reverse=True)
 
 
 def _dft_reconstruct(spectrum: np.ndarray, n: int, t_values: np.ndarray, top_k: int | None = None) -> np.ndarray:
@@ -1219,6 +1219,7 @@ forecast for comparison:
             prediction_classical.predicted_primes,
             prediction_quantum.predicted_gaps,
             prediction_quantum.predicted_primes,
+            strict=True,
         )
     )
 )}
@@ -1585,7 +1586,12 @@ def main() -> None:
         backward_classical = backward_verify(top_k=effective_top_k)
         backward_quantum = backward_verify_quantum(args.qubits, top_k=effective_top_k)
         for step, (c_pred, q_pred, actual) in enumerate(
-            zip(backward_classical.predicted_gaps, backward_quantum.predicted_gaps, backward_classical.actual_gaps),
+            zip(
+                backward_classical.predicted_gaps,
+                backward_quantum.predicted_gaps,
+                backward_classical.actual_gaps,
+                strict=True,
+            ),
             start=1,
         ):
             print(
@@ -1632,6 +1638,7 @@ def main() -> None:
                 prediction_classical.predicted_primes,
                 prediction_quantum.predicted_gaps,
                 prediction_quantum.predicted_primes,
+                strict=True,
             ),
             start=1,
         ):

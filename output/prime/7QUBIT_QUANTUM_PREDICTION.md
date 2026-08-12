@@ -4,7 +4,7 @@ Generated automatically by `quantum_prime_gaps.py` at the end of every run -- th
 file is overwritten each time, it does not accumulate history (see `NOTES.md` and
 `6QUBIT_RESULTS.md` in this directory for hand-written point-in-time snapshots).
 
-- **Timestamp:** 2026-08-12T10:46:26
+- **Timestamp:** 2026-08-12T11:33:15
 - **Qubits (`--qubits`):** 7 (dim = 128, shared by the landscape/portrait and prediction pathways)
 - **Effective top-k for the paired backward-verification comparison:** 5
 - **`--hardware` used this run:** No
