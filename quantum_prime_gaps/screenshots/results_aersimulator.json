@@ -1,0 +1,15 @@
+{
+  "label": "AerSimulator",
+  "n_qubits": 2,
+  "shots": 8192,
+  "counts": {
+    "10": 54,
+    "00": 4053,
+    "01": 2029,
+    "11": 2056
+  },
+  "pearson_r": 0.560439,
+  "mi_bits": 0.273686,
+  "null_mi_mean": 4.1e-05,
+  "z_score": 2789.0222
+}
