@@ -5,15 +5,12 @@ Recurrent quantum circuit for prime gap sequence learning and next-prime predict
 Architecture:
   - Fixed 4-qubit circuit: Bell pair + RY gap encoding + approximated iQFT (degree=1)
   - Time is the extra dimension: slides a 4-gap window across all 49 known gaps (46 windows)
-  - Feedback: each window's measurement mode (most-likely bitstring) adds a small
-    angle offset to the next window's RY encoding — classical post-processing that
-    imprints sequence history onto the quantum state
-  - Final window output distribution → decode → predicted next gap
+  - Feedback (v2): per-qubit — each bit of the mode bitstring drives its own qubit's
+    angle offset independently, breaking the |0000⟩ attractor of the uniform scalar approach
+  - Scale sweep: runs scales [0.05, 0.1, 0.2] and picks the one closest to gap=4
+  - Noisy preflight: winning scale re-run on AerSimulator with Kingston noise model
 
-Ground truth:
-  - Last known prime:  #50 = 229
-  - Actual next prime: #51 = 233
-  - Actual gap:        4
+Ground truth: prime #50 = 229, prime #51 = 233, gap = 4
 
 Run: python prime_predictor.py
 """
@@ -22,6 +19,7 @@ from __future__ import annotations
 
 import json
 import math
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -53,9 +51,7 @@ TRUE_GAP         = TRUE_NEXT_PRIME - LAST_KNOWN_PRIME  # 4
 
 WINDOW_SIZE    = 4
 SHOTS          = 8_192
-FEEDBACK_SCALE = math.pi / 16   # max modulation ±π/32 ≈ ±0.098 rad
-
-# ── Sliding windows ────────────────────────────────────────────────────────────
+SWEEP_SCALES   = [0.05, 0.1, 0.2]   # feedback_scale values to test
 
 WINDOWS: list[list[int]] = [
     ALL_GAPS[i : i + WINDOW_SIZE]
@@ -64,26 +60,29 @@ WINDOWS: list[list[int]] = [
 
 # ── Circuit builder ────────────────────────────────────────────────────────────
 
-def build_circuit(gaps: list[int], feedback_offset: float = 0.0) -> QuantumCircuit:
-    """Bell pair + RY gap encoding (+ feedback offset) + approx iQFT (degree=1)."""
+def build_circuit(gaps: list[int], offsets: list[float]) -> QuantumCircuit:
+    """Bell pair + per-qubit RY (gap angle + per-qubit offset) + approx iQFT (degree=1)."""
     qc = QuantumCircuit(WINDOW_SIZE, WINDOW_SIZE)
     qc.h(0)
     qc.cx(0, 1)
     for i, gap in enumerate(gaps):
-        angle = gap * math.pi / MAX_GAP + feedback_offset
+        angle = gap * math.pi / MAX_GAP + offsets[i]
         qc.ry(angle, i)
     iqft = synth_qft_full(WINDOW_SIZE, inverse=True, do_swaps=True, approximation_degree=1)
     qc.compose(iqft, inplace=True)
     qc.measure(range(WINDOW_SIZE), range(WINDOW_SIZE))
     return qc
 
-# ── Feedback ───────────────────────────────────────────────────────────────────
+# ── Per-qubit feedback ─────────────────────────────────────────────────────────
 
-def bitstring_to_offset(bs: str) -> float:
-    """Map mode bitstring integer → small angle offset centered at 0."""
-    val = int(bs, 2)
-    max_val = (1 << len(bs)) - 1  # 15 for 4-bit
-    return (val / max_val - 0.5) * FEEDBACK_SCALE
+def bitstring_to_offsets(bs: str, scale: float) -> list[float]:
+    """Decompose mode bitstring into per-qubit angle offsets.
+
+    Qiskit bitstrings are MSB-left; qubit 0 is the rightmost character.
+    Each bit maps to -(scale/2) for 0 or +(scale/2) for 1, centered at 0.
+    """
+    n = len(bs)
+    return [(int(bs[n - 1 - q]) - 0.5) * scale for q in range(n)]
 
 # ── MI utilities ───────────────────────────────────────────────────────────────
 
@@ -129,60 +128,151 @@ def mi_halves(bits: np.ndarray, left: list[int], right: list[int]) -> float:
 # ── Prediction decoder ─────────────────────────────────────────────────────────
 
 def decode_prediction(counts: dict) -> tuple[float, int, str, int]:
-    """Return (weighted_gap_float, weighted_gap_rounded, mode_bitstring, mode_gap_rounded)."""
+    """Return (weighted_gap_float, weighted_gap_rounded, mode_bs, mode_gap_rounded)."""
     total = sum(counts.values())
     weighted_gap = 0.0
     for bs, cnt in counts.items():
         val = int(bs, 2)
-        angle = val * math.pi / 15       # 0–15 → 0–π
-        gap = angle * MAX_GAP / math.pi  # angle → gap value
+        angle = val * math.pi / 15
+        gap   = angle * MAX_GAP / math.pi
         weighted_gap += (cnt / total) * gap
 
-    mode_bs = max(counts, key=counts.get)
-    mode_val = int(mode_bs, 2)
-    mode_gap = mode_val * math.pi / 15 * MAX_GAP / math.pi
+    mode_bs  = max(counts, key=counts.get)
+    mode_gap = int(mode_bs, 2) * math.pi / 15 * MAX_GAP / math.pi
 
     return weighted_gap, max(1, round(weighted_gap)), mode_bs, max(1, round(mode_gap))
 
-# ── Simulation ─────────────────────────────────────────────────────────────────
-
-SIM = AerSimulator()
-
-
-def run_window(qc: QuantumCircuit) -> dict:
-    tqc = transpile(qc, SIM)
-    return SIM.run(tqc, shots=SHOTS).result().get_counts()
-
 # ── Recurrent loop ─────────────────────────────────────────────────────────────
 
-def run_recurrent() -> list[dict]:
-    records = []
-    feedback_offset = 0.0
+@dataclass
+class WindowRecord:
+    window_idx: int
+    gaps: list[int]
+    offsets_in: list[float]
+    mi: float
+    mode_bs: str
+    mode_prob: float
+    counts: dict = field(default_factory=dict)
+
+
+def run_recurrent(scale: float, sim: AerSimulator,
+                  verbose: bool = False) -> list[WindowRecord]:
+    records: list[WindowRecord] = []
+    offsets = [0.0] * WINDOW_SIZE   # start with no feedback
 
     for w_idx, window in enumerate(WINDOWS):
-        qc = build_circuit(window, feedback_offset)
-        counts = run_window(qc)
+        qc = build_circuit(window, offsets)
+        tqc = transpile(qc, sim)
+        counts = sim.run(tqc, shots=SHOTS).result().get_counts()
+
         bits = counts_to_bits(counts, WINDOW_SIZE)
-        mi = mi_halves(bits, [0, 1], [2, 3])
-        mode_bs = max(counts, key=counts.get)
-        next_offset = bitstring_to_offset(mode_bs)
+        mi   = mi_halves(bits, [0, 1], [2, 3])
+        mode_bs  = max(counts, key=counts.get)
+        next_offsets = bitstring_to_offsets(mode_bs, scale)
 
-        records.append({
-            "window_idx": w_idx,
-            "gaps": window,
-            "feedback_in": round(feedback_offset, 6),
-            "mi": round(mi, 6),
-            "mode_bs": mode_bs,
-            "mode_prob": round(counts[mode_bs] / SHOTS, 4),
-            "counts": {k: v for k, v in sorted(counts.items(), key=lambda x: -x[1])},
-        })
+        records.append(WindowRecord(
+            window_idx=w_idx,
+            gaps=window,
+            offsets_in=offsets[:],
+            mi=round(mi, 6),
+            mode_bs=mode_bs,
+            mode_prob=round(counts[mode_bs] / SHOTS, 4),
+            counts={k: v for k, v in sorted(counts.items(), key=lambda x: -x[1])},
+        ))
 
-        feedback_offset = next_offset
-        if w_idx % 10 == 0 or w_idx == len(WINDOWS) - 1:
-            print(f"  Window {w_idx:2d}/{len(WINDOWS)-1}  gaps={window}  "
-                  f"MI={mi:.4f}  mode={mode_bs}  → next_offset={next_offset:+.4f}")
+        if verbose and (w_idx % 10 == 0 or w_idx == len(WINDOWS) - 1):
+            print(f"    w={w_idx:2d}  gaps={window}  MI={mi:.4f}  "
+                  f"mode={mode_bs}  offsets→{[f'{o:+.3f}' for o in next_offsets]}")
+
+        offsets = next_offsets
 
     return records
+
+# ── Scale sweep ────────────────────────────────────────────────────────────────
+
+@dataclass
+class ScaleResult:
+    scale: float
+    records: list[WindowRecord]
+    weighted_gap: float
+    rounded_gap: int
+    mode_bs: str
+    mode_gap: int
+    error: float
+    mean_mi: float
+    final_mi: float
+
+    @property
+    def predicted_prime(self) -> int:
+        return LAST_KNOWN_PRIME + self.rounded_gap
+
+
+def sweep(sim: AerSimulator) -> list[ScaleResult]:
+    results = []
+    for scale in SWEEP_SCALES:
+        print(f"\n  scale={scale} ──────────────────────────────────────────")
+        records = run_recurrent(scale, sim, verbose=True)
+        final_counts = records[-1].counts
+        w_gap, r_gap, m_bs, m_gap = decode_prediction(final_counts)
+        mi_vals = [r.mi for r in records]
+        results.append(ScaleResult(
+            scale=scale,
+            records=records,
+            weighted_gap=w_gap,
+            rounded_gap=r_gap,
+            mode_bs=m_bs,
+            mode_gap=m_gap,
+            error=abs(w_gap - TRUE_GAP),
+            mean_mi=sum(mi_vals) / len(mi_vals),
+            final_mi=mi_vals[-1],
+        ))
+        print(f"    → E[gap]={w_gap:.4f}  rounded={r_gap}  prime={LAST_KNOWN_PRIME+r_gap}"
+              f"  error={abs(w_gap-TRUE_GAP):.4f}  mean_MI={mi_vals[-1]:.4f}")
+    return results
+
+
+def pick_winner(results: list[ScaleResult]) -> ScaleResult:
+    return min(results, key=lambda r: r.error)
+
+# ── Noisy preflight ────────────────────────────────────────────────────────────
+
+def build_noisy_sim() -> tuple[AerSimulator | None, object | None]:
+    """Try to build Kingston-noise AerSimulator. Returns (sim, coupling_map) or (None, None)."""
+    try:
+        from qiskit_aer.noise import NoiseModel
+        from qiskit_ibm_runtime import QiskitRuntimeService
+        service = QiskitRuntimeService()
+        backend = service.backend("ibm_kingston")
+        nm = NoiseModel.from_backend(backend)
+        sim = AerSimulator(noise_model=nm)
+        print(f"  Kingston noise model loaded: {len(nm.noise_instructions)} error channels")
+        return sim, backend.coupling_map
+    except Exception as exc:
+        print(f"  Noise model unavailable ({exc}); skipping noisy preflight")
+        return None, None
+
+
+def run_noisy_preflight(winner: ScaleResult, noisy_sim: AerSimulator,
+                        coupling_map) -> ScaleResult:
+    print(f"\n  Noisy preflight  (scale={winner.scale}, Kingston noise model) ──────")
+    records = run_recurrent(winner.scale, noisy_sim, verbose=True)
+    final_counts = records[-1].counts
+    w_gap, r_gap, m_bs, m_gap = decode_prediction(final_counts)
+    mi_vals = [r.mi for r in records]
+    result = ScaleResult(
+        scale=winner.scale,
+        records=records,
+        weighted_gap=w_gap,
+        rounded_gap=r_gap,
+        mode_bs=m_bs,
+        mode_gap=m_gap,
+        error=abs(w_gap - TRUE_GAP),
+        mean_mi=sum(mi_vals) / len(mi_vals),
+        final_mi=mi_vals[-1],
+    )
+    print(f"  → E[gap]={w_gap:.4f}  rounded={r_gap}  prime={LAST_KNOWN_PRIME+r_gap}"
+          f"  error={abs(w_gap-TRUE_GAP):.4f}")
+    return result
 
 # ── Plotting ───────────────────────────────────────────────────────────────────
 
@@ -190,10 +280,9 @@ BG   = "#0d1117"
 GRID = "#1e293b"
 MUT  = "#94a3b8"
 FG   = "#f8fafc"
-BLUE = "#7dd3fc"
-ORG  = "#fb923c"
 GRN  = "#22c55e"
 RED  = "#ef4444"
+SCALE_COLORS = ["#7dd3fc", "#fb923c", "#a78bfa"]   # blue / orange / purple
 
 
 def _dark_ax(ax: plt.Axes) -> None:
@@ -204,136 +293,212 @@ def _dark_ax(ax: plt.Axes) -> None:
     ax.yaxis.label.set_color(MUT)
 
 
-def make_plots(records: list[dict], weighted_gap: float, rounded_gap: int,
-               mode_bs: str, mode_gap: int, out_dir: Path) -> None:
+def plot_mi_sweep(sweep_results: list[ScaleResult], winner: ScaleResult,
+                  out_dir: Path) -> None:
+    fig, ax = plt.subplots(figsize=(12, 4))
+    fig.patch.set_facecolor(BG)
+    _dark_ax(ax)
 
-    mi_vals  = np.array([r["mi"] for r in records])
-    max_gaps = np.array([max(r["gaps"]) for r in records])
-    x = np.arange(len(records))
+    for sr, color in zip(sweep_results, SCALE_COLORS, strict=True):
+        mi_vals = [r.mi for r in sr.records]
+        lw = 2.0 if sr is winner else 1.0
+        alpha = 1.0 if sr is winner else 0.55
+        label = f"scale={sr.scale}  E[gap]={sr.weighted_gap:.2f}→{sr.rounded_gap}"
+        if sr is winner:
+            label += "  ★ winner"
+        ax.plot(mi_vals, color=color, linewidth=lw, alpha=alpha, label=label)
 
-    # ── Plot 1: MI over windows ────────────────────────────────────────────────
-    fig1, ax1 = plt.subplots(figsize=(11, 4))
-    fig1.patch.set_facecolor(BG)
-    _dark_ax(ax1)
+    ax.axvline(len(WINDOWS) - 1, color="#64748b", linewidth=1, linestyle="--")
+    ax.set_xlabel("Window index")
+    ax.set_ylabel("Root MI  (bits)")
+    ax.set_title("MI across recurrent windows — feedback scale sweep", color=FG, fontsize=11)
+    ax.legend(framealpha=0, labelcolor="white", fontsize=9)
+    fig.tight_layout()
+    p = out_dir / "predictor_mi_sweep.png"
+    fig.savefig(p, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved → {p}")
 
-    cmap = plt.cm.get_cmap("plasma")
-    for i in range(len(records)):
-        ax1.axvspan(i - 0.5, i + 0.5, alpha=0.20,
-                    color=cmap(max_gaps[i] / MAX_GAP), linewidth=0)
 
-    ax1.plot(x, mi_vals, color=BLUE, linewidth=1.5, zorder=3)
-    ax1.fill_between(x, mi_vals, alpha=0.15, color=BLUE, zorder=2)
-    ax1.axvline(len(records) - 1, color=ORG, linewidth=1.2,
-                linestyle="--", label="Prediction window")
-    ax1.set_xlabel("Window index")
-    ax1.set_ylabel("Root MI  (bits)")
-    ax1.set_title("Mutual Information across recurrent windows", color=FG, fontsize=11)
-    ax1.legend(framealpha=0, labelcolor=ORG, fontsize=9)
-
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(0, MAX_GAP))
-    sm.set_array([])
-    cb = fig1.colorbar(sm, ax=ax1, pad=0.01)
-    cb.set_label("Max gap in window", color=MUT)
-    cb.ax.yaxis.set_tick_params(color=MUT)
-    plt.setp(cb.ax.yaxis.get_ticklabels(), color=MUT)
-
-    fig1.tight_layout()
-    p1 = out_dir / "predictor_mi.png"
-    fig1.savefig(p1, dpi=150, bbox_inches="tight")
-    plt.close(fig1)
-    print(f"  Saved → {p1}")
-
-    # ── Plot 2: Final window distribution ─────────────────────────────────────
-    final_counts = records[-1]["counts"]
+def plot_final_dist(result: ScaleResult, label: str, filename: str,
+                    out_dir: Path) -> None:
+    counts = result.records[-1].counts
     states = [f"{i:04b}" for i in range(16)]
-    probs  = [final_counts.get(s, 0) / SHOTS for s in states]
+    probs  = [counts.get(s, 0) / SHOTS for s in states]
     gap_labels = [f"{i / 15 * MAX_GAP:.1f}" for i in range(16)]
 
     true_bin = round(TRUE_GAP / MAX_GAP * 15)
-    pred_bin = round(weighted_gap / MAX_GAP * 15)
+    pred_bin = round(result.weighted_gap / MAX_GAP * 15)
 
     bar_colors = [
-        GRN if i == true_bin else ORG if i == pred_bin else "#334155"
+        GRN if i == true_bin else "#fb923c" if i == pred_bin else "#334155"
         for i in range(16)
     ]
 
-    fig2, ax2 = plt.subplots(figsize=(12, 5))
-    fig2.patch.set_facecolor(BG)
-    _dark_ax(ax2)
-    bars = ax2.bar(range(16), probs, color=bar_colors,
-                   edgecolor=GRID, linewidth=0.5, width=0.8)
-    ax2.set_xticks(range(16))
-    ax2.set_xticklabels(
+    fig, ax = plt.subplots(figsize=(12, 5))
+    fig.patch.set_facecolor(BG)
+    _dark_ax(ax)
+    bars = ax.bar(range(16), probs, color=bar_colors, edgecolor=GRID,
+                  linewidth=0.5, width=0.8)
+    ax.set_xticks(range(16))
+    ax.set_xticklabels(
         [f"|{s}⟩\n(≈{g})" for s, g in zip(states, gap_labels, strict=True)],
         fontsize=7, color=MUT,
     )
-    ax2.set_ylabel("Probability")
-    ax2.set_title(
-        f"Final window prediction distribution  —  window gaps: {WINDOWS[-1]}\n"
-        f"Weighted E[gap] = {weighted_gap:.2f} → {rounded_gap}  |  "
-        f"True gap = {TRUE_GAP}  (prime {LAST_KNOWN_PRIME} → {TRUE_NEXT_PRIME})",
+    ax.set_ylabel("Probability")
+    ax.set_title(
+        f"{label}\nWindow {WINDOWS[-1]}  |  E[gap]={result.weighted_gap:.2f}→{result.rounded_gap}"
+        f"  |  True gap={TRUE_GAP}  |  scale={result.scale}",
         color=FG, fontsize=10,
     )
-    ax2.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=1))
+    ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=1))
     legend_els = [
-        Patch(facecolor=GRN, label=f"Ground truth  (gap = {TRUE_GAP})"),
-        Patch(facecolor=ORG, label=f"Weighted prediction  ({weighted_gap:.2f} → {rounded_gap})"),
+        Patch(facecolor=GRN,      label=f"Ground truth  (gap={TRUE_GAP})"),
+        Patch(facecolor="#fb923c", label=f"Weighted prediction ({result.weighted_gap:.2f}→{result.rounded_gap})"),
         Patch(facecolor="#334155", label="Other states"),
     ]
-    ax2.legend(handles=legend_els, framealpha=0, labelcolor="white", fontsize=9)
+    ax.legend(handles=legend_els, framealpha=0, labelcolor="white", fontsize=9)
     for bar, prob in zip(bars, probs, strict=True):
         if prob > 0.04:
-            ax2.text(bar.get_x() + bar.get_width() / 2, prob + 0.003,
-                     f"{prob:.1%}", ha="center", va="bottom", fontsize=7, color=FG)
-    fig2.tight_layout()
-    p2 = out_dir / "predictor_final_dist.png"
-    fig2.savefig(p2, dpi=150, bbox_inches="tight")
-    plt.close(fig2)
-    print(f"  Saved → {p2}")
+            ax.text(bar.get_x() + bar.get_width() / 2, prob + 0.003,
+                    f"{prob:.1%}", ha="center", va="bottom", fontsize=7, color=FG)
+    fig.tight_layout()
+    p = out_dir / filename
+    fig.savefig(p, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved → {p}")
 
-    # ── Plot 3: Summary scorecard ──────────────────────────────────────────────
-    fig3, ax3 = plt.subplots(figsize=(8, 4.5))
-    fig3.patch.set_facecolor(BG)
-    ax3.set_facecolor(BG)
-    ax3.axis("off")
 
-    correct = (rounded_gap == TRUE_GAP)
-    verdict_txt   = "✓  CORRECT" if correct else "✗  MISS"
-    verdict_color = GRN if correct else RED
+def plot_summary(sweep_results: list[ScaleResult], winner: ScaleResult,
+                 noisy: ScaleResult | None, out_dir: Path) -> None:
+    fig, ax = plt.subplots(figsize=(9, 5.5))
+    fig.patch.set_facecolor(BG)
+    ax.set_facecolor(BG)
+    ax.axis("off")
 
-    rows = [
-        ("Last known prime",        f"#{len(FIRST_50_PRIMES)} = {LAST_KNOWN_PRIME}",          MUT),
-        ("Windows processed",       f"{len(records)} (all 49 gaps, window=4)",                MUT),
-        ("Final window",            str(WINDOWS[-1]),                                          MUT),
-        None,
-        ("Weighted prediction",     f"E[gap] = {weighted_gap:.3f}  →  gap = {rounded_gap}", ORG),
-        ("Mode prediction",         f"|{mode_bs}⟩  →  gap ≈ {mode_gap}",                    BLUE),
-        ("Predicted next prime",    f"{LAST_KNOWN_PRIME} + {rounded_gap} = "
-                                    f"{LAST_KNOWN_PRIME + rounded_gap}",                       ORG),
-        None,
-        ("Ground truth gap",        str(TRUE_GAP),                                             GRN),
-        ("Ground truth prime",      str(TRUE_NEXT_PRIME),                                      GRN),
-        ("Verdict",                 verdict_txt,                                               verdict_color),
+    def verdict(r: ScaleResult) -> tuple[str, str]:
+        ok = r.rounded_gap == TRUE_GAP
+        return ("✓ CORRECT", GRN) if ok else ("✗ MISS", RED)
+
+    rows: list[tuple] = [
+        ("Scale sweep — AerSimulator (clean)", None, FG),
     ]
+    for sr, color in zip(sweep_results, SCALE_COLORS, strict=True):
+        flag = "  ★" if sr is winner else ""
+        v, vc = verdict(sr)
+        rows.append((
+            f"  scale={sr.scale}{flag}",
+            f"E[gap]={sr.weighted_gap:.3f}→{sr.rounded_gap}  prime={sr.predicted_prime}"
+            f"  err={sr.error:.3f}  {v}",
+            color if sr is not winner else vc,
+        ))
 
-    y = 0.97
+    rows.append((None, None, None))
+    rows.append((f"Winner  (per-qubit feedback, scale={winner.scale})" , None, FG))
+    rows.append((
+        "  Clean sim",
+        f"E[gap]={winner.weighted_gap:.3f}→{winner.rounded_gap}  "
+        f"prime={winner.predicted_prime}  " + verdict(winner)[0],
+        verdict(winner)[1],
+    ))
+
+    if noisy is not None:
+        nv, nvc = verdict(noisy)
+        rows.append((
+            "  Kingston noisy sim",
+            f"E[gap]={noisy.weighted_gap:.3f}→{noisy.rounded_gap}  "
+            f"prime={noisy.predicted_prime}  {nv}",
+            nvc,
+        ))
+        hw_ready = noisy.error < 1.5
+        rows.append((None, None, None))
+        rows.append((
+            "Hardware flag",
+            "✓ READY — noisy preflight passed" if hw_ready
+            else "⚠ MARGINAL — error > 1.5, review before hardware",
+            GRN if hw_ready else "#facc15",
+        ))
+
+    rows.append((None, None, None))
+    rows.append(("Ground truth", f"gap={TRUE_GAP}  prime={TRUE_NEXT_PRIME}", GRN))
+
+    ax.set_title("Quantum Prime Predictor v2 — Result Summary",
+                 color=FG, fontsize=13, pad=10)
+    y = 0.95
     for row in rows:
-        if row is None:
+        if row[0] is None:
             y -= 0.04
             continue
         label, value, color = row
-        ax3.text(0.02, y, f"{label}:", transform=ax3.transAxes,
-                 fontsize=10, color="#64748b", va="top")
-        ax3.text(0.48, y, value, transform=ax3.transAxes,
-                 fontsize=10, color=color, va="top", fontweight="bold")
-        y -= 0.088
+        ax.text(0.02, y, label + (":" if value else ""), transform=ax.transAxes,
+                fontsize=9.5, color="#64748b" if value else FG, va="top")
+        if value:
+            ax.text(0.42, y, value, transform=ax.transAxes,
+                    fontsize=9.5, color=color, va="top", fontweight="bold")
+        y -= 0.082
 
-    ax3.set_title("Quantum Prime Predictor — Result", color=FG, fontsize=13, pad=10)
-    fig3.tight_layout()
-    p3 = out_dir / "predictor_summary.png"
-    fig3.savefig(p3, dpi=150, bbox_inches="tight")
-    plt.close(fig3)
-    print(f"  Saved → {p3}")
+    fig.tight_layout()
+    p = out_dir / "predictor_summary_v2.png"
+    fig.savefig(p, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved → {p}")
+
+# ── JSON serialiser ────────────────────────────────────────────────────────────
+
+def save_json(sweep_results: list[ScaleResult], winner: ScaleResult,
+              noisy: ScaleResult | None, json_dir: Path) -> None:
+    data: dict = {
+        "config": {
+            "n_qubits": WINDOW_SIZE,
+            "shots_per_window": SHOTS,
+            "sweep_scales": SWEEP_SCALES,
+            "iqft_approx_degree": 1,
+            "n_windows": len(WINDOWS),
+            "max_gap": MAX_GAP,
+            "feedback": "per-qubit v2",
+        },
+        "ground_truth": {
+            "last_known_prime": LAST_KNOWN_PRIME,
+            "true_next_prime": TRUE_NEXT_PRIME,
+            "true_gap": TRUE_GAP,
+        },
+        "sweep": [
+            {
+                "scale": sr.scale,
+                "weighted_gap": round(sr.weighted_gap, 6),
+                "rounded_gap": sr.rounded_gap,
+                "predicted_prime": sr.predicted_prime,
+                "error_abs": round(sr.error, 4),
+                "mean_mi": round(sr.mean_mi, 6),
+                "final_mi": round(sr.final_mi, 6),
+                "correct": sr.rounded_gap == TRUE_GAP,
+                "per_window": [
+                    {"w": r.window_idx, "gaps": r.gaps, "mi": r.mi,
+                     "mode": r.mode_bs, "mode_prob": r.mode_prob}
+                    for r in sr.records
+                ],
+                "final_counts": sr.records[-1].counts,
+            }
+            for sr in sweep_results
+        ],
+        "winner": winner.scale,
+    }
+    if noisy is not None:
+        data["noisy_preflight"] = {
+            "scale": noisy.scale,
+            "weighted_gap": round(noisy.weighted_gap, 6),
+            "rounded_gap": noisy.rounded_gap,
+            "predicted_prime": noisy.predicted_prime,
+            "error_abs": round(noisy.error, 4),
+            "mean_mi": round(noisy.mean_mi, 6),
+            "final_mi": round(noisy.final_mi, 6),
+            "correct": noisy.rounded_gap == TRUE_GAP,
+            "hw_ready": noisy.error < 1.5,
+            "final_counts": noisy.records[-1].counts,
+        }
+    p = json_dir / "prime_predictor_results.json"
+    p.write_text(json.dumps(data, indent=2))
+    print(f"  JSON → {p}")
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
@@ -344,76 +509,57 @@ def main() -> None:
     json_dir.mkdir(parents=True, exist_ok=True)
 
     print("=" * 65)
-    print("  Quantum Prime Predictor — Recurrent Gap Learning")
-    print(f"  Primes: {len(FIRST_50_PRIMES)}  |  Gaps: {len(ALL_GAPS)}  |  "
-          f"Windows: {len(WINDOWS)}  |  MAX_GAP: {MAX_GAP}")
+    print("  Quantum Prime Predictor v2 — Per-Qubit Feedback + Scale Sweep")
+    print(f"  Gaps: {len(ALL_GAPS)}  Windows: {len(WINDOWS)}  "
+          f"Scales: {SWEEP_SCALES}  MAX_GAP: {MAX_GAP}")
     print(f"  Last prime: {LAST_KNOWN_PRIME}  |  True next: {TRUE_NEXT_PRIME}  "
-          f"(gap = {TRUE_GAP})")
-    print(f"  Feedback scale: ±{FEEDBACK_SCALE/2:.4f} rad  |  "
-          f"Shots/window: {SHOTS:,}")
+          f"(gap={TRUE_GAP})")
     print("=" * 65)
-    print()
 
-    print("Running recurrent loop (46 windows × 8,192 shots)...")
-    records = run_recurrent()
+    clean_sim = AerSimulator()
 
-    final_counts = records[-1]["counts"]
-    weighted_gap, rounded_gap, mode_bs, mode_gap = decode_prediction(final_counts)
-    predicted_prime = LAST_KNOWN_PRIME + rounded_gap
-    correct = (rounded_gap == TRUE_GAP)
+    print("\nPhase 1 — scale sweep on clean AerSimulator")
+    sweep_results = sweep(clean_sim)
 
-    print()
-    print("─" * 65)
-    print(f"  Final window gaps:    {WINDOWS[-1]}")
-    print(f"  Weighted prediction:  E[gap] = {weighted_gap:.4f}  →  {rounded_gap}  "
-          f"→  prime {predicted_prime}")
-    print(f"  Mode prediction:      |{mode_bs}⟩  →  gap ≈ {mode_gap}")
-    print(f"  Ground truth:         gap = {TRUE_GAP}  →  prime {TRUE_NEXT_PRIME}")
-    print(f"  Error:                |{weighted_gap:.4f} − {TRUE_GAP}| = "
-          f"{abs(weighted_gap - TRUE_GAP):.4f}")
-    print(f"  Verdict:              {'✓ CORRECT' if correct else '✗ MISS'}")
-    print("─" * 65)
+    winner = pick_winner(sweep_results)
+    print(f"\n  Winner: scale={winner.scale}  E[gap]={winner.weighted_gap:.4f}"
+          f"  →  prime {winner.predicted_prime}  (error={winner.error:.4f})")
 
-    data = {
-        "config": {
-            "n_qubits": WINDOW_SIZE,
-            "shots_per_window": SHOTS,
-            "feedback_scale_rad": FEEDBACK_SCALE,
-            "iqft_approx_degree": 1,
-            "n_windows": len(WINDOWS),
-            "max_gap": MAX_GAP,
-        },
-        "ground_truth": {
-            "last_known_prime": LAST_KNOWN_PRIME,
-            "true_next_prime": TRUE_NEXT_PRIME,
-            "true_gap": TRUE_GAP,
-        },
-        "prediction": {
-            "final_window_gaps": WINDOWS[-1],
-            "weighted_gap_float": round(weighted_gap, 6),
-            "weighted_gap_rounded": rounded_gap,
-            "mode_bitstring": mode_bs,
-            "mode_gap_rounded": mode_gap,
-            "predicted_prime": predicted_prime,
-            "correct": correct,
-            "error_abs": round(abs(weighted_gap - TRUE_GAP), 4),
-        },
-        "per_window": [
-            {k: v for k, v in r.items() if k != "counts"}
-            for r in records
-        ],
-        "final_window_counts": records[-1]["counts"],
-    }
-    json_path = json_dir / "prime_predictor_results.json"
-    json_path.write_text(json.dumps(data, indent=2))
-    print(f"\n  JSON → {json_path}")
+    print("\nPhase 2 — Kingston noisy preflight")
+    noisy_sim, coupling_map = build_noisy_sim()
+    noisy_result: ScaleResult | None = None
+    if noisy_sim is not None:
+        noisy_result = run_noisy_preflight(winner, noisy_sim, coupling_map)
+        nv = "✓ CORRECT" if noisy_result.rounded_gap == TRUE_GAP else "✗ MISS"
+        print(f"  Noisy result: E[gap]={noisy_result.weighted_gap:.4f}"
+              f"  →  prime {noisy_result.predicted_prime}  {nv}")
+        if noisy_result.error < 1.5:
+            print("  ✓ HARDWARE READY — noisy preflight error < 1.5")
+        else:
+            print("  ⚠ MARGINAL — review before hardware submission")
 
     print("\nGenerating plots...")
-    make_plots(records, weighted_gap, rounded_gap, mode_bs, mode_gap, out_dir)
+    plot_mi_sweep(sweep_results, winner, out_dir)
+    plot_final_dist(winner, "Winner — clean AerSimulator",
+                    "predictor_final_dist_winner.png", out_dir)
+    if noisy_result is not None:
+        plot_final_dist(noisy_result, "Kingston noisy preflight",
+                        "predictor_noisy_dist.png", out_dir)
+    plot_summary(sweep_results, winner, noisy_result, out_dir)
 
-    mean_mi = sum(r["mi"] for r in records) / len(records)
-    print(f"\n  Mean MI across all windows: {mean_mi:.4f} bits")
-    print(f"  Final window MI:            {records[-1]['mi']:.4f} bits")
+    save_json(sweep_results, winner, noisy_result, json_dir)
+
+    print("\n── Final report ─────────────────────────────────────────────")
+    for sr in sweep_results:
+        mark = "★" if sr is winner else " "
+        print(f"  {mark} scale={sr.scale}  E[gap]={sr.weighted_gap:.4f}"
+              f"  rounded={sr.rounded_gap}  prime={sr.predicted_prime}"
+              f"  err={sr.error:.4f}")
+    if noisy_result is not None:
+        nv = "✓" if noisy_result.rounded_gap == TRUE_GAP else "✗"
+        print(f"\n  Noisy: E[gap]={noisy_result.weighted_gap:.4f}"
+              f"  prime={noisy_result.predicted_prime}  {nv}")
+    print(f"\n  Ground truth: gap={TRUE_GAP}  prime={TRUE_NEXT_PRIME}")
     print()
 
 
