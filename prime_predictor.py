@@ -337,14 +337,14 @@ def plot_mi_sweep(sweep_results: list[ScaleResult], winner: ScaleResult,
                  color=FG, fontsize=11)
     ax.legend(framealpha=0, labelcolor="white", fontsize=9)
     fig.tight_layout()
-    p = out_dir / f"predictor_{VERSION}_{ts}_mi.png"
+    p = out_dir / "mi.png"
     fig.savefig(p, dpi=150, bbox_inches="tight")
     plt.close(fig)
     return p
 
 
 def plot_dist(result: ScaleResult, title: str,
-              ts: str, suffix: str, out_dir: Path) -> Path:
+              ts: str, filename: str, out_dir: Path) -> Path:
     counts = result.records[-1].counts
     lmax   = result.final_local_max
     states = [f"{i:04b}" for i in range(16)]
@@ -389,7 +389,7 @@ def plot_dist(result: ScaleResult, title: str,
             ax.text(bar.get_x() + bar.get_width() / 2, prob + 0.003,
                     f"{prob:.1%}", ha="center", va="bottom", fontsize=7, color=FG)
     fig.tight_layout()
-    p = out_dir / f"predictor_{VERSION}_{ts}_{suffix}.png"
+    p = out_dir / filename
     fig.savefig(p, dpi=150, bbox_inches="tight")
     plt.close(fig)
     return p
@@ -457,7 +457,7 @@ def plot_summary(sweep_results: list[ScaleResult], winner: ScaleResult,
         y -= 0.080
 
     fig.tight_layout()
-    p = out_dir / f"predictor_{VERSION}_{ts}_summary.png"
+    p = out_dir / "summary.png"
     fig.savefig(p, dpi=150, bbox_inches="tight")
     plt.close(fig)
     return p
@@ -519,7 +519,7 @@ def save_json(ts: str, sweep_results: list[ScaleResult], winner: ScaleResult,
             "hw_ready": noisy.error < 1.5,
             "final_counts": noisy.records[-1].counts,
         }
-    p = out_dir / f"predictor_{VERSION}_{ts}.json"
+    p = out_dir / "results.json"
     p.write_text(json.dumps(data, indent=2))
     return p
 
@@ -527,13 +527,13 @@ def save_json(ts: str, sweep_results: list[ScaleResult], winner: ScaleResult,
 
 def auto_commit_push(ts: str, weighted_gap: float, error: float) -> None:
     msg = f"Run output {ts} — E[gap]={weighted_gap:.4f}, error={error:.4f}"
-    subprocess.run(["git", "add", "output/prime/"], check=True, cwd=REPO_ROOT)
+    subprocess.run(["git", "add", f"output/prime/{ts}/"], check=True, cwd=REPO_ROOT)
     result = subprocess.run(
         ["git", "commit", "-m", msg],
         cwd=REPO_ROOT, capture_output=True, text=True,
     )
     if result.returncode == 0:
-        print(f"  Committed: {msg}")
+        print(f"  Committed: output/prime/{ts}/")
         subprocess.run(["git", "push"], check=True, cwd=REPO_ROOT)
         print("  Pushed to remote.")
     else:
@@ -543,7 +543,7 @@ def auto_commit_push(ts: str, weighted_gap: float, error: float) -> None:
 
 def main() -> None:
     ts = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
-    out_dir = REPO_ROOT / "output" / "prime"
+    out_dir = REPO_ROOT / "output" / "prime" / ts
     out_dir.mkdir(parents=True, exist_ok=True)
 
     print("=" * 65)
@@ -574,10 +574,10 @@ def main() -> None:
     paths: list[Path] = []
     paths.append(plot_mi_sweep(sweep_results, winner, ts, out_dir))
     paths.append(plot_dist(winner, f"Winner (scale={winner.scale}) — clean sim",
-                           ts, "dist_clean", out_dir))
+                           ts, "dist_clean.png", out_dir))
     if noisy_result is not None:
         paths.append(plot_dist(noisy_result, "Kingston noisy preflight",
-                               ts, "dist_noisy", out_dir))
+                               ts, "dist_noisy.png", out_dir))
     paths.append(plot_summary(sweep_results, winner, noisy_result, ts, out_dir))
 
     json_path = save_json(ts, sweep_results, winner, noisy_result, out_dir)
