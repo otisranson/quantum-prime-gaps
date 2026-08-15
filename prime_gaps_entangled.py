@@ -32,8 +32,12 @@ from __future__ import annotations
 import argparse
 import math
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from qiskit import QuantumCircuit
 
 # ---------------------------------------------------------------------------
 # Prime data
@@ -61,7 +65,7 @@ def gap_to_angle(gap: int) -> float:
 # Circuit construction
 # ---------------------------------------------------------------------------
 
-def build_circuit(n_qubits: int = 2) -> "QuantumCircuit":
+def build_circuit(n_qubits: int = 2) -> QuantumCircuit:
     """Build: Bell pair → gap encoding → inverse QFT."""
     from qiskit import QuantumCircuit
     from qiskit.circuit.library import QFTGate
@@ -167,7 +171,7 @@ def null_mi_zscore(bits: np.ndarray, observed_mi: float, n_trials: int = 500) ->
 # Simulator run
 # ---------------------------------------------------------------------------
 
-def run_simulator(qc: "QuantumCircuit", shots: int = 8192) -> dict[str, int]:
+def run_simulator(qc: QuantumCircuit, shots: int = 8192) -> dict[str, int]:
     from qiskit_aer import AerSimulator
 
     sim = AerSimulator()
@@ -182,9 +186,10 @@ def run_simulator(qc: "QuantumCircuit", shots: int = 8192) -> dict[str, int]:
 # Hardware run
 # ---------------------------------------------------------------------------
 
-def run_hardware(qc: "QuantumCircuit", shots: int = 8192) -> dict[str, int]:
-    from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2 as Sampler
+def run_hardware(qc: QuantumCircuit, shots: int = 8192) -> dict[str, int]:
     from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
+    from qiskit_ibm_runtime import QiskitRuntimeService
+    from qiskit_ibm_runtime import SamplerV2 as Sampler
 
     service = QiskitRuntimeService()
     backend = service.backend("ibm_kingston")

@@ -1,0 +1,85 @@
+{
+  "backend_proxy": "fake_sherbrooke",
+  "gaps": [
+    1,
+    2
+  ],
+  "angles_rad": [
+    0.224399,
+    0.448799
+  ],
+  "shots": 8192,
+  "results": [
+    {
+      "label": "1 \u00b7 Baseline (opt=1)",
+      "depth": 28,
+      "gates_2q": 6,
+      "gates_1q": 35,
+      "gates_total": 41,
+      "mi_bits": 0.273344,
+      "composite_score": 46.0,
+      "note": "Standard transpile \u2014 reference point"
+    },
+    {
+      "label": "2 \u00b7 Native gates (opt=0)",
+      "depth": 57,
+      "gates_2q": 6,
+      "gates_1q": 85,
+      "gates_total": 91,
+      "mi_bits": 0.266017,
+      "composite_score": 75.0398,
+      "note": "Raw decomposition into {ecr,sx,rz,x}; no optimization passes"
+    },
+    {
+      "label": "3 \u00b7 Aggressive (opt=3)",
+      "depth": 18,
+      "gates_2q": 3,
+      "gates_1q": 21,
+      "gates_total": 24,
+      "mi_bits": 0.265456,
+      "composite_score": 27.0454,
+      "note": "Full gate cancellation, commutation, Sabre routing"
+    },
+    {
+      "label": "4 \u00b7 Approx iQFT (deg=1)",
+      "depth": 17,
+      "gates_2q": 4,
+      "gates_1q": 20,
+      "gates_total": 24,
+      "mi_bits": 0.897933,
+      "composite_score": 29.0,
+      "note": "degree=1: CP(-\u03c0/2) |angle|\u2265\u03c0/2^1 \u2192 gate retained; approximation has no effect at n=2 (would prune at n\u22653)"
+    },
+    {
+      "label": "4 \u00b7 Approx iQFT (deg=2)",
+      "depth": 17,
+      "gates_2q": 4,
+      "gates_1q": 20,
+      "gates_total": 24,
+      "mi_bits": 0.900206,
+      "composite_score": 29.0,
+      "note": "degree=2: CP(-\u03c0/2) |angle|\u2265\u03c0/2^2 \u2192 gate retained; approximation has no effect at n=2 (would prune at n\u22653)"
+    },
+    {
+      "label": "4 \u00b7 Approx iQFT (deg=3)",
+      "depth": 17,
+      "gates_2q": 4,
+      "gates_1q": 20,
+      "gates_total": 24,
+      "mi_bits": 0.90257,
+      "composite_score": 29.0,
+      "note": "degree=3: CP(-\u03c0/2) |angle|\u2265\u03c0/2^3 \u2192 gate retained; approximation has no effect at n=2 (would prune at n\u22653)"
+    },
+    {
+      "label": "5 \u00b7 Topology-aware (q0\u2194q1, opt=3)",
+      "depth": 18,
+      "gates_2q": 3,
+      "gates_1q": 21,
+      "gates_total": 24,
+      "mi_bits": 0.264488,
+      "composite_score": 27.0551,
+      "note": "Pinned to physical qubits 0,1 (direct ECR connection); opt=3"
+    }
+  ],
+  "winner": "3 \u00b7 Aggressive (opt=3)"
+}
