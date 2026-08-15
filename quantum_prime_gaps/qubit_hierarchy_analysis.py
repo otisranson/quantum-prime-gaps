@@ -59,11 +59,12 @@ def regenerate_data() -> None:
     circuit through AerSimulator at the same shot count so the two datasets are
     apples-to-apples. Only needed once; RESULTS_PATH is checked into the repo."""
     sys.path.insert(0, str(HERE))
-    from quantum_prime_gaps import FIRST_50_PRIMES, amplitude_encode, build_amplitude_circuit, prime_gaps  # noqa: E402
     from qiskit import transpile  # noqa: E402
     from qiskit.circuit.library import QFTGate  # noqa: E402
     from qiskit_aer import AerSimulator  # noqa: E402
     from qiskit_ibm_runtime import QiskitRuntimeService  # noqa: E402
+
+    from quantum_prime_gaps import FIRST_50_PRIMES, amplitude_encode, build_amplitude_circuit, prime_gaps  # noqa: E402
 
     job_id = "d9tso90u5hac73agdrk0"
     gaps = prime_gaps(FIRST_50_PRIMES)

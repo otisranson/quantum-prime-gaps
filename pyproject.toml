@@ -1,0 +1,12 @@
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = [
+    "E501",  # line length is enforced by formatting judgment, not a hard column count, across this repo's long prose-in-code comments
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["quantum_prime_gaps"]
