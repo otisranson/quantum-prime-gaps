@@ -5,20 +5,45 @@
 [![Built with Qiskit](https://img.shields.io/badge/built%20with-Qiskit-6929C4)](https://www.ibm.com/quantum/qiskit)
 [![Runs on real IBM Quantum hardware](https://img.shields.io/badge/hardware-IBM%20Quantum-000000)](https://quantum.cloud.ibm.com/)
 
-A quantum spectral analysis of the prime gap sequence, built on
-[Qiskit](https://www.ibm.com/quantum/qiskit), plus an [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve)
-experiment evolving its prediction pathway against a documented negative result. Split out of the
-broader [`QuantumResearch`](https://github.com/otisranson/QuantumResearch) repo on 2026-08-15 as its
-own project, with full git history preserved.
+---
+
+## What this is
+
+This project asks a simple question: **can a quantum circuit predict the next prime number?**
+
+We take the first 50 primes, compute the 49 gaps between them (2, 1, 2, 4, 2, 4, ...), and feed those gaps into real IBM quantum hardware. A 4-qubit circuit encodes each group of 4 consecutive gaps as rotation angles, runs them through a Quantum Fourier Transform, and produces a probability distribution over possible next gaps. A recurrent feedback loop — 46 windows, one per consecutive group of 4 gaps — carries the most likely outcome forward each time. The final window predicts the 50th gap.
+
+**The hardware got it right.** After 46 sequential jobs on ibm_kingston (a 156-qubit IBM quantum processor), the weighted probability distribution predicted **gap = 4, prime = 233** — the correct answer — with error 0.04.
+
+![Kingston hardware run scorecard](quantum_prime_gaps/screenshots/prime_predictor/summary_hw.png)
+
+This is a research/exploration project. The prediction is correct, but prime gaps don't have the kind of periodic structure that makes a QFT-based extrapolation meaningful in general — the honest framing is "the circuit found the right answer on this instance," not "we solved prime prediction." The interesting result is that entanglement structure survives 46 rounds of real hardware noise well enough for the weighted expectation to land on the correct gap.
+
+---
+
+## Results at a glance
+
+| Run | Backend | E[gap] | Predicted prime | Correct? |
+|-----|---------|--------|-----------------|----------|
+| AerSimulator (clean) | software | 4.006 | 233 | ✓ |
+| AerSimulator (Kingston noise model) | software | 4.27 | 233 | ✓ |
+| **ibm_kingston hardware** | **real hardware** | **3.958** | **233** | **✓** |
+
+46 hardware jobs, 8,192 shots each, full recurrent feedback loop. Committed as `13c57e6`.
+
+![MI across all 46 hardware windows](quantum_prime_gaps/screenshots/prime_predictor/mi_hw.png)
+
+![Final window probability distribution from hardware](quantum_prime_gaps/screenshots/prime_predictor/dist_hw.png)
+
+---
 
 ## Contents
 
-- ⭐ [`quantum_prime_gaps/`](#quantum_prime_gaps) — prime gap sequence encoded onto qubits, read
-  out through a QFT, predicted two ways (classical FFT vs. an actual quantum circuit), and run on
-  real IBM Quantum hardware
-- [`quantum_evolve/`](#quantum_evolve) — [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve)
-  evolving `quantum_prime_gaps/`'s frequency-reconstruction step against its own backward-verification
-  benchmark
+- ⭐ [`prime_predictor.py`](#prime-predictor) — recurrent 4-qubit prime gap predictor, simulator version
+- ⭐ [`prime_predictor_hw.py`](#prime-predictor-hardware) — same predictor on real ibm_kingston hardware
+- [`quantum_prime_gaps/`](#quantum_prime_gaps) — original QFT spectral analysis of the full gap sequence, 7-qubit hardware runs, qubit correlation analysis
+- [`optimize_4qubit.py`](#optimize_4qubit) — circuit depth reduction comparison (5 strategies against Kingston's real coupling map)
+- [`quantum_evolve/`](#quantum_evolve) — [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve) experiment evolving the prediction reconstruction step
 
 ## Setup
 
@@ -38,6 +63,72 @@ python3 -m venv .venv
 ```
 
 `.github/workflows/lint.yml` runs it on every push and pull request.
+
+---
+
+## Prime Predictor
+
+**`prime_predictor.py`** — recurrent 4-qubit prime gap predictor running on AerSimulator.
+
+The predictor slides a 4-gap window across the 49 known prime gaps. Each window builds a
+quantum circuit: a Bell pair seeds entanglement, four RY gates encode the window's gaps as rotation
+angles (normalized locally to the window's max gap, not globally), and an approximated inverse QFT
+(degree=1) applies the frequency transform. Measuring the 4-qubit register produces a bitstring;
+that bitstring feeds back as per-qubit angle offsets into the next window's circuit. After 46
+windows the final distribution is decoded into a predicted gap.
+
+The key design insight is **local window normalization**: dividing each gap by the window's own
+maximum rather than the global maximum of 14. With global normalization, windows containing gaps of
+12 or 14 push all angles near π, collapsing the distribution to |0000⟩ regardless of the actual
+gap pattern. Local normalization spreads angles uniformly within each window, so the circuit's
+interference pattern reflects the relative gap structure instead of absolute magnitude.
+
+```bash
+./.venv/bin/python prime_predictor.py
+```
+
+Writes timestamped output to `output/prime/{YYYYMMDD_HHMMSS}/`: `mi.png` (mutual information across
+windows), `dist_clean.png`, `dist_noisy.png` (distribution under Kingston noise model), and
+`summary.png` (prediction scorecard). Auto-commits and pushes each run.
+
+![Simulator prediction scorecard](quantum_prime_gaps/screenshots/prime_predictor/summary_sim.png)
+
+## Prime Predictor — Hardware
+
+**`prime_predictor_hw.py`** — same recurrent predictor submitted to ibm_kingston.
+
+Runs all 46 windows sequentially on real hardware: each job waits for its result before the next
+circuit is built and submitted, preserving the feedback chain exactly as in the simulator. A
+checkpoint is saved after every window so no data is lost if the run is interrupted. Each window
+uses `optimization_level=3, seed_transpiler=42` against Kingston's real coupling map (352 edges).
+
+Expected runtime: 2–8 hours depending on Kingston queue depth.
+
+```bash
+export QISKIT_IBM_TOKEN="your-ibm-quantum-api-token"
+./.venv/bin/python prime_predictor_hw.py
+```
+
+Writes `mi_hw.png`, `dist_hw.png`, `summary_hw.png`, `results_hw.md`, and `results_hw.json` to a
+timestamped subdirectory. Auto-commits and pushes on completion.
+
+## optimize_4qubit
+
+**`optimize_4qubit.py`** — compares five circuit strategies for the 4-qubit predictor against
+Kingston's real coupling map, choosing the best depth/MI tradeoff before committing to hardware.
+
+| Strategy | Depth | ECR | Sim root MI | Verdict |
+|----------|------:|----:|------------:|---------|
+| Full iQFT (baseline) | 69 | 19 | 0.349 bits | ✓ valid |
+| **Approx iQFT degree=1** | **55** | **17** | **0.349 bits** | **✓ winner** |
+| Approx iQFT degree=2 | 30 | 7 | 0.254 bits | ✗ too lossy |
+| Approx iQFT degree=3 | 12 | 1 | 0.000 bits | ✗ no signal |
+| Linear iQFT | 103 | 33 | 0.121 bits | ✗ too deep |
+
+Winner: approximated iQFT removing only the smallest CP gate (π/8). Cuts depth from 81 to 55
+without meaningful signal loss. Results documented in `output/prime/ENTANGLED_V2_4QUBIT_RESULTS.md`.
+
+---
 
 ## `quantum_prime_gaps/`
 
