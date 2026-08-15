@@ -1,0 +1,15 @@
+{
+  "label": "ibm_kingston",
+  "n_qubits": 2,
+  "shots": 8192,
+  "counts": {
+    "00": 3988,
+    "01": 2003,
+    "11": 2079,
+    "10": 122
+  },
+  "pearson_r": 0.541003,
+  "mi_bits": 0.244574,
+  "null_mi_mean": 4.3e-05,
+  "z_score": 2397.7699
+}

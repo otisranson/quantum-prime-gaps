@@ -195,7 +195,7 @@ def run_hardware(qc: QuantumCircuit, shots: int = 8192) -> dict[str, int]:
     backend = service.backend("ibm_kingston")
     print(f"  Backend: {backend.name}  Status: {backend.status().status_msg}")
 
-    pm = generate_preset_pass_manager(backend=backend, optimization_level=1)
+    pm = generate_preset_pass_manager(backend=backend, optimization_level=3, seed_transpiler=42)
     isa_qc = pm.run(qc)
 
     sampler = Sampler(mode=backend)
