@@ -1,0 +1,72 @@
+{
+  "timestamp": "20260815_231029",
+  "target": {
+    "last_prime": 229,
+    "true_gap": 4,
+    "true_prime": 233
+  },
+  "quantum_hw": {
+    "method": "Quantum circuit (ibm_kingston, v3-hw, 46 windows)",
+    "raw": 3.9578,
+    "rounded": 4,
+    "predicted_prime": 233,
+    "error": 0.0422,
+    "correct": true
+  },
+  "classical": [
+    {
+      "method": "Mean gap",
+      "raw": 4.632653,
+      "rounded": 5,
+      "predicted_prime": 234,
+      "error": 0.632653,
+      "correct": false,
+      "note": "mean of all 49 gaps"
+    },
+    {
+      "method": "Last gap",
+      "raw": 2.0,
+      "rounded": 2,
+      "predicted_prime": 231,
+      "error": 2.0,
+      "correct": false,
+      "note": "gap[48] = 2"
+    },
+    {
+      "method": "Moving avg (w=4)",
+      "raw": 7.5,
+      "rounded": 8,
+      "predicted_prime": 237,
+      "error": 3.5,
+      "correct": false,
+      "note": "mean of last 4 gaps: [12, 12, 4, 2]"
+    },
+    {
+      "method": "Median gap",
+      "raw": 4.0,
+      "rounded": 4,
+      "predicted_prime": 233,
+      "error": 0.0,
+      "correct": true,
+      "note": "median of all 49 gaps"
+    },
+    {
+      "method": "Linear regression",
+      "raw": 6.311224,
+      "rounded": 6,
+      "predicted_prime": 235,
+      "error": 2.311224,
+      "correct": false,
+      "note": "slope=0.0671, intercept=3.0212, R\u00b2=0.1058, p=0.023"
+    },
+    {
+      "method": "FFT (top-3)",
+      "raw": 3.720005,
+      "rounded": 4,
+      "predicted_prime": 233,
+      "error": 0.279995,
+      "correct": true,
+      "note": "DFT extrapolation at t=49, keeping 3 dominant components"
+    }
+  ]
+}
