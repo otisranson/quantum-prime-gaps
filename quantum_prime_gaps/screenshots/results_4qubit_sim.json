@@ -1,0 +1,27 @@
+{
+  "n_qubits": 4,
+  "gaps": [
+    1,
+    2,
+    2,
+    4
+  ],
+  "angles_rad": [
+    0.224399,
+    0.448799,
+    0.448799,
+    0.897598
+  ],
+  "shots": 8192,
+  "transpiled_depth": 81,
+  "gates_2q": 18,
+  "gates_1q": 119,
+  "gates_total": 137,
+  "sim_root_mi_bits": 0.373037,
+  "sim_mi_q0q1_bits": 0.015984,
+  "hw_retention_model": {
+    "t2_depth_scale": 195.76,
+    "predicted_retention_pct": 66.1,
+    "predicted_hw_root_mi": 0.246633
+  }
+}
