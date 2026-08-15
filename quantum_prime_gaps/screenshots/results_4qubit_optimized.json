@@ -1,0 +1,98 @@
+{
+  "n_qubits": 4,
+  "gaps": [
+    1,
+    2,
+    2,
+    4
+  ],
+  "angles_rad": [
+    0.224399,
+    0.448799,
+    0.448799,
+    0.897598
+  ],
+  "shots": 8192,
+  "t2_depth_calibrated": 195.8,
+  "baseline_root_mi_sim": 0.373,
+  "mi_tolerance_pct": 10,
+  "strategies": [
+    {
+      "label": "Full iQFT (degree=0, baseline)",
+      "depth": 69,
+      "ecr": 19,
+      "root_mi_sim": 0.352745,
+      "retention_predicted": 0.703,
+      "predicted_hw_mi": 0.247979,
+      "within_tolerance": true,
+      "note": "All 6 CP gates; long-range routing required"
+    },
+    {
+      "label": "Approx iQFT degree=1",
+      "depth": 55,
+      "ecr": 17,
+      "root_mi_sim": 0.348865,
+      "retention_predicted": 0.7551,
+      "predicted_hw_mi": 0.26343,
+      "within_tolerance": true,
+      "note": "5/6 CPs; removes CP(\u03c0/8)"
+    },
+    {
+      "label": "Approx iQFT degree=2",
+      "depth": 30,
+      "ecr": 7,
+      "root_mi_sim": 0.2542,
+      "retention_predicted": 0.8579,
+      "predicted_hw_mi": 0.218089,
+      "within_tolerance": false,
+      "note": "3/6 CPs; nearest-neighbor only \u2192 no long-range SWAP"
+    },
+    {
+      "label": "Approx iQFT degree=3",
+      "depth": 12,
+      "ecr": 1,
+      "root_mi_sim": 0.0,
+      "retention_predicted": 0.9406,
+      "predicted_hw_mi": 0.0,
+      "within_tolerance": false,
+      "note": "0 CPs; H+SWAP only"
+    },
+    {
+      "label": "Linear iQFT",
+      "depth": 103,
+      "ecr": 33,
+      "root_mi_sim": 0.120765,
+      "retention_predicted": 0.5909,
+      "predicted_hw_mi": 0.071365,
+      "within_tolerance": false,
+      "note": "synth_qft_line: nearest-neighbor synthesis (no do_swaps)"
+    }
+  ],
+  "winner": "Approx iQFT degree=1",
+  "hardware": {
+    "job_id": "da0b8gt0vrcc73bq8lb0",
+    "backend": "ibm_kingston",
+    "hw_depth": 56,
+    "hw_ecr": 0,
+    "hw_root_mi": 0.183889,
+    "hw_sim_retention": 0.5271,
+    "counts": {
+      "1010": 977,
+      "1100": 1146,
+      "0000": 2499,
+      "0100": 1061,
+      "0110": 842,
+      "0010": 336,
+      "0111": 108,
+      "1000": 398,
+      "0001": 151,
+      "1110": 186,
+      "0101": 123,
+      "1101": 34,
+      "1001": 52,
+      "1111": 82,
+      "0011": 35,
+      "1011": 162
+    }
+  }
+}
