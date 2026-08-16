@@ -39,8 +39,10 @@ This is a research/exploration project. The prediction is correct, but prime gap
 
 ## Contents
 
-- ⭐ [`prime_predictor.py`](#prime-predictor) — recurrent 4-qubit prime gap predictor, simulator version
-- ⭐ [`prime_predictor_hw.py`](#prime-predictor-hardware) — same predictor on real ibm_kingston hardware
+- [`prime_predictor.py`](#prime-predictor) — recurrent 4-qubit prime gap predictor, simulator version
+- [`prime_predictor_hw.py`](#prime-predictor-hardware) — same predictor on real ibm_kingston hardware
+- [`terrain_visualizer.py`](#terrain-visualizer) — topographic landscape renderer from recorded hardware distributions
+- [`classical_baseline.py`](#classical-baselines) — deterministic baseline comparison against the hardware result
 - [`quantum_prime_gaps/`](#quantum_prime_gaps) — original QFT spectral analysis of the full gap sequence, 7-qubit hardware runs, qubit correlation analysis
 - [`optimize_4qubit.py`](#optimize_4qubit) — circuit depth reduction comparison (5 strategies against Kingston's real coupling map)
 - [`quantum_evolve/`](#quantum_evolve) — [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve) experiment evolving the prediction reconstruction step
@@ -111,6 +113,57 @@ export QISKIT_IBM_TOKEN="your-ibm-quantum-api-token"
 
 Writes `mi_hw.png`, `dist_hw.png`, `summary_hw.png`, `results_hw.md`, and `results_hw.json` to a
 timestamped subdirectory. Auto-commits and pushes on completion.
+
+## Terrain Visualizer
+
+**`terrain_visualizer.py`** — reads the recorded 46-window probability distributions from the
+Kingston hardware run and renders them as a topographic landscape, with no new hardware calls.
+
+Each window's 16-state probability distribution becomes a row of terrain: high-probability states
+rise as red/gold peaks, low-probability states sink into dark navy valleys. Hillshading from a
+simulated directional light gives the surface depth. Contour lines trace iso-probability bands.
+The left margin strip shows MI per window as a plasma heat bar, and the peak/trough/prediction
+windows are annotated.
+
+![Quantum terrain — full 46-window topographic map](quantum_prime_gaps/screenshots/prime_predictor/terrain_static.png)
+
+The animated version builds the terrain frame by frame as the circuit moves through the prime
+sequence, with a gold scanline marking the current window and the probability distribution rendered
+inline as a bar chart against each new row.
+
+![Terrain animated — 46-frame reveal](quantum_prime_gaps/screenshots/prime_predictor/terrain_animated.gif)
+
+```bash
+./.venv/bin/python terrain_visualizer.py
+```
+
+Writes `terrain_static.png` and `terrain_animated.gif` to a timestamped subdirectory under
+`output/prime/`. No IBM Quantum account needed — reads from
+`output/prime/20260815_204703/results_hw.json`.
+
+## Classical Baselines
+
+**`classical_baseline.py`** — runs six deterministic classical predictors against the same target
+(gap after prime 229, ground truth gap=4) and compares them to the quantum hardware result.
+
+| Method | Raw E[gap] | Rounded | Error | Correct? |
+|--------|:----------:|:-------:|------:|:--------:|
+| **Quantum HW (ibm_kingston)** | 3.958 | 4 | 0.042 | ✓ |
+| Mean gap | 4.633 | 5 | 0.633 | ✗ |
+| Last gap | 2.000 | 2 | 2.000 | ✗ |
+| Moving avg (w=4) | 7.500 | 8 | 3.500 | ✗ |
+| Median gap | 4.000 | 4 | 0.000 | ✓ |
+| Linear regression | 6.311 | 6 | 2.311 | ✗ |
+| FFT (top-3) | 3.720 | 4 | 0.280 | ✓ |
+
+The median predictor is the honest strong baseline — it gets the correct answer with zero compute
+because the median of prime gaps 1–229 happens to equal 4. The generalization test (`prime239_generalization.py`)
+moves the target to gap=6 (prime 239), where the median predicts 4 and fails, while the quantum
+circuit reaches E[gap]=5.43 — a near-miss that sits closer to the true answer than any other method.
+
+```bash
+./.venv/bin/python classical_baseline.py
+```
 
 ## optimize_4qubit
 
