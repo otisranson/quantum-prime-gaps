@@ -78,7 +78,7 @@ def main() -> None:
     ax.hist(null_dist, bins=60, color="#4c72b0", alpha=0.7,
             label=f"null distribution (n={N_NULL_SAMPLES} random windows)")
     colors = ["#d1495b", "#e08214", "#2a9d5c"]
-    for (cp, mag), color in zip(cp_mags.items(), colors):
+    for (cp, mag), color in zip(cp_mags.items(), colors, strict=True):
         ax.axvline(mag, color=color, lw=2, ls="--",
                    label=f"changepoint {cp}: |deriv|={mag:.4f} (p{percentiles[cp]:.0f})")
     p90 = float(np.percentile(null_dist, 90))

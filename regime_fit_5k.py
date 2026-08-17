@@ -143,7 +143,7 @@ def main() -> None:
 
     ax1.plot(rw, rm, color="#4c72b0", lw=1, label=f"MI rolling mean (K={ROLLING_K})")
     colors = {"up": "#2a9d5c", "down": "#d1495b"}
-    for i, (win, dirn) in enumerate(zip(windows, directions + [None])):
+    for i, (win, dirn) in enumerate(zip(windows, directions + [None], strict=True)):
         c = colors.get(dirn, "#888888") if dirn else "#888888"
         ax1.axvline(win, color=c, ls="--", lw=1.5, label=f"regime change {i+1} (w={win}, {dirn or '?'})")
     ax1.set_xlabel("window number")

@@ -71,8 +71,6 @@ def main() -> None:
     # ALL indices (not just the 3 changepoints) land within PROXIMITY of a
     # zero-crossing? If that fraction is already ~1, "proximity" to the
     # changepoints is not informative -- it would happen almost everywhere.
-    all_indices = np.arange(len(deriv))
-    has_nearby_crossing = np.zeros(len(all_indices), dtype=bool)
     # vectorized: for each crossing, mark +/- PROXIMITY window as covered
     covered = np.zeros(len(deriv) + 1, dtype=int)
     for c in crossings:
