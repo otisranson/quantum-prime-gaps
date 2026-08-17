@@ -30,6 +30,19 @@ Run the same regime change analysis using a circuit with random phase rotations,
 
 The TVD of 0.3914 between hardware and simulation (`QuantumResearch/quantum_radio/quantum_radio_report_12q.md`, 12-qubit run) is from the sibling `quantum_radio` project, which does use `RZ(π·φ)` as a deliberate phase-kick. I think this divergence may partly reflect φ structure diverging under real quantum noise — hardware and simulation may be processing the φ rotation differently at scale. This is a separate question from the regime-spacing observation above, since it's about a different circuit and a different project; any connection between the two is speculative until the critical test above is run.
 
+## Correction
+
+**Correction — August 16, 2026:**
+
+The framing of this hypothesis contains a factual error. This repository's circuit does not use φ as a rotation angle. The φ rotation lives in the Quantum Radio repository, not here. The "imprint" mechanism described above does not apply to this circuit.
+
+What remains:
+- Three data points showing approximate φ proportions — this could be coincidence at n=3
+- A question about whether φ structure is latent in prime gaps independent of any circuit design
+- The control run is still the right test, but it's testing the prime gap structure claim, not a circuit imprint claim
+
+The "highest priority" framing is premature given only three data points and a removed mechanism. Downgraded to: interesting observation, worth one control run, not yet a hypothesis with teeth.
+
 ## Status
 
-Unverified. Control run not yet executed. This is the highest priority open question in the project.
+Unverified. Control run not yet executed. Downgraded from "highest priority" per the Correction above — interesting observation, worth one control run, not yet a hypothesis with teeth.
