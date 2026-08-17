@@ -53,6 +53,26 @@ This does not rule out a real relationship between gap derivative structure and 
 
 **What a real test would need:** a feature that isn't already present at ~50% of all indices — e.g. the size of the smoothed-derivative's peak/trough excursion around a changepoint vs. a typical excursion elsewhere, or run-length of sign persistence, compared against a proper null distribution (e.g. changepoint positions randomized many times and the proximity-pass rate recomputed) rather than a single fixed-radius proximity check.
 
+## Empirical Check — Layer 2 Magnitude Test
+
+**Date checked:** August 16, 2026
+
+**Method:** Same K=100-smoothed gap derivative as the revised proximity test, but instead of checking whether a zero-crossing exists nearby (a test with no discriminating power, per above), this measures the derivative's absolute *magnitude* at each of the three known changepoint windows and compares it to a null distribution: 10,000 windows sampled at random (seed=42) from the same 4899-point derivative sequence. See `layer2_magnitude_test.py` and `output/prime/analysis/layer2_magnitude_test.png`.
+
+**Null distribution:** mean=0.076, std=0.073, 90th percentile=0.180.
+
+**Percentile ranks, stated explicitly:**
+
+| changepoint window | \|deriv\| | percentile in null distribution |
+|---|---|---|
+| 1529 | 0.0400 | **38.3** |
+| 2501 | 0.1200 | **79.9** |
+| 4211 | 0.1000 | **74.6** |
+
+**Conclusion, stated clearly: Layer 2 magnitude hypothesis is REFUTED.** None of the three changepoints exceed the 90th-percentile threshold set in advance (window 1529 is below the *median* of the null distribution, at the 38th percentile). This is not a base-rate/no-power failure like the two proximity tests above — magnitude is continuously distributed and this test could have come out either way. It came out negative: regime changes in the MI rolling mean are not reliably accompanied by unusually large swings in the smoothed gap derivative.
+
+Taken together with the two inconclusive proximity tests, Layer 2 (as stated — "regime changes correspond to zero-crossings of Dimension 2") now has one clean negative result and no positive evidence. The "primes of primes" framing is not supported by any of the three checks run.
+
 ## Status
 
-Unverified. Both Layer 2 proximity tests (raw derivative and K=100-smoothed derivative) returned null results — neither confirms nor refutes the hypothesis, because zero-crossings are too dense in this data for a fixed-radius proximity check to discriminate signal from chance. The "primes of primes" framing is not supported by either check run so far.
+Layer 2 magnitude test: **refuted** (2026-08-16). Both proximity tests: inconclusive (no discriminating power). Net: no supporting evidence found for Layer 2 across three independent empirical checks; one direct refutation.
