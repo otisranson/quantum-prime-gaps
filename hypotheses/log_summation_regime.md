@@ -30,3 +30,13 @@ This needs to be verified by running the circuit beyond 5000 primes to see wheth
 ## Status
 
 Unverified. Prediction locked 2026-08-16, ahead of the beyond-5000-primes run. Existing-data check (caveat 2 above) is not favorable to the prediction as stated.
+
+## Empirical Check
+
+**Date checked:** August 16, 2026
+
+**Result:** Prediction of regime 4 at window 4585 does not hold in existing 5000-prime data. Nearest candidate changepoint is 374 windows away. Prediction is a miss.
+
+**Note on sequencing:** The second order hypothesis (gap derivative, regime internal wave structure) was generated immediately after the up-down-up anomaly surfaced — not independently. That timing is recorded here. The hypothesis may still be valid but was not generated blind to the data it partially explains.
+
+**What held:** Three stable changepoints confirmed across smoothing scales. Log fit is real. Up-down-up signature is real and documented rather than hidden.
