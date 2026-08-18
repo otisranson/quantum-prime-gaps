@@ -290,3 +290,9 @@ This is consistent with, and reinforces, the 20k Scale-Up's finding immediately 
 2. **"Boundary kurtosis" per regime (in the full table) is the peak intensity of the changepoint that *starts* that regime** (regime i+1 gets changepoint i's value; regime 0 has none) — one specific, stated convention for a many-to-one relationship (each regime has two possible bounding changepoints, start and end, except the first and last); an end-boundary convention was not also computed or compared.
 3. **All 40 regimes happened to clear `MIN_CONFIDENT_SIZE=100` only because the upstream detector's `min_size=400` already exceeds it** — this doesn't validate 100 as a universally sufficient threshold for stable skew/kurtosis estimation in general, only that it wasn't binding here.
 4. **Same cross-scale caveat as the 20k Scale-Up above**: these 40 regimes come from gap-space changepoint detection (rolling-mean binary segmentation), not the original quantum-MI-space detection used for the 3-regime work — comparing "3 regimes" numbers to "40 regimes" numbers directly is comparing across two different detection methods, not a strict apples-to-apples scale-up of the identical procedure.
+
+## Visual Gallery: 10 Regimes
+
+**Date:** August 17, 2026 (system clock reports August 18, 2026 UTC for the run timestamp/commit below — same session).
+
+Qualitative companion to the 40-Regime Characterization above — 10 of the 40 regimes (indices `[0, 4, 9, 13, 17, 22, 26, 30, 35, 39]`, spread across the full sequence), plotted individually (raw shape + its already-computed mean/variance/skew/kurtosis in the title) and as one length-and-amplitude-normalized overlay in the same style as the original cross-regime self-similarity test. No new statistical test or claim — see `layer3_regime_wave_gallery.py` and `output/prime/20260818_020803/{layer3_regime_wave_gallery.png,layer3_regime_wave_overlay.png}` for visual inspection alongside the numeric results above.
