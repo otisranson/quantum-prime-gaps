@@ -1,0 +1,1687 @@
+{
+  "timestamp": "20260818_020038",
+  "gaps_source": "data/primes_20000.json",
+  "changepoints_source": "output/prime/20260818_015045/results.json",
+  "config": {
+    "rolling_std_window": 100,
+    "spike_thresholds": [
+      2.0,
+      2.5,
+      3.0
+    ],
+    "n_fft_peaks": 3,
+    "min_confident_size": 100,
+    "n_perm_corr": 5000,
+    "seed": 42
+  },
+  "n_regimes": 40,
+  "n_low_confidence": 0,
+  "correlation_tests": {
+    "mean": {
+      "observed_r": 0.8505450401797553,
+      "null_mean": 0.00017507255698149073,
+      "null_std": 0.16173278667051377,
+      "p_value_two_tailed": 0.0
+    },
+    "variance": {
+      "observed_r": 0.8756348671016614,
+      "null_mean": 0.001563785356981148,
+      "null_std": 0.16328064054323474,
+      "p_value_two_tailed": 0.0
+    },
+    "skew": {
+      "observed_r": 0.14063984649694317,
+      "null_mean": -0.00016724883549768882,
+      "null_std": 0.16095971191849004,
+      "p_value_two_tailed": 0.3848
+    },
+    "kurtosis_excess": {
+      "observed_r": 0.09361764869964893,
+      "null_mean": 0.00034660265779271917,
+      "null_std": 0.1597422052773215,
+      "p_value_two_tailed": 0.5714
+    }
+  },
+  "regimes": [
+    {
+      "index": 0,
+      "bounds": [
+        0,
+        499
+      ],
+      "length": 499,
+      "mean": 7.152305,
+      "variance": 25.271392,
+      "skew": 1.610993,
+      "kurtosis_excess_internal": 3.418659,
+      "kurtosis_peak_boundary": null,
+      "spike_density": {
+        "2.0": 0.052104208416833664,
+        "2.5": 0.03406813627254509,
+        "3.0": 0.014028056112224449
+      },
+      "spike_count": {
+        "2.0": 26,
+        "2.5": 17,
+        "3.0": 7
+      },
+      "volatility_mean": 4.879953,
+      "volatility_trend_slope": 2.500927,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 8.603,
+          "power": 66456.789
+        },
+        {
+          "period_gaps": 2.132,
+          "power": 63463.228
+        },
+        {
+          "period_gaps": 4.708,
+          "power": 60878.799
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 1,
+      "bounds": [
+        499,
+        1271
+      ],
+      "length": 772,
+      "mean": 8.805699,
+      "variance": 40.236859,
+      "skew": 1.423929,
+      "kurtosis_excess_internal": 2.10715,
+      "kurtosis_peak_boundary": 3.300542,
+      "spike_density": {
+        "2.0": 0.05829015544041451,
+        "2.5": 0.025906735751295335,
+        "3.0": 0.02461139896373057
+      },
+      "spike_count": {
+        "2.0": 45,
+        "2.5": 20,
+        "3.0": 19
+      },
+      "volatility_mean": 6.392013,
+      "volatility_trend_slope": 0.311322,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.092,
+          "power": 188195.251
+        },
+        {
+          "period_gaps": 2.797,
+          "power": 184936.816
+        },
+        {
+          "period_gaps": 2.026,
+          "power": 160409.354
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 2,
+      "bounds": [
+        1271,
+        1890
+      ],
+      "length": 619,
+      "mean": 9.537964,
+      "variance": 49.279253,
+      "skew": 1.527706,
+      "kurtosis_excess_internal": 2.72172,
+      "kurtosis_peak_boundary": 3.38604,
+      "spike_density": {
+        "2.0": 0.05654281098546042,
+        "2.5": 0.033925686591276254,
+        "3.0": 0.012924071082390954
+      },
+      "spike_count": {
+        "2.0": 35,
+        "2.5": 21,
+        "3.0": 8
+      },
+      "volatility_mean": 6.778504,
+      "volatility_trend_slope": -0.412075,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 4.299,
+          "power": 206483.367
+        },
+        {
+          "period_gaps": 2.098,
+          "power": 206369.329
+        },
+        {
+          "period_gaps": 2.149,
+          "power": 153826.188
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 3,
+      "bounds": [
+        1890,
+        2290
+      ],
+      "length": 400,
+      "mean": 9.99,
+      "variance": 53.6199,
+      "skew": 1.529993,
+      "kurtosis_excess_internal": 3.489026,
+      "kurtosis_peak_boundary": 6.800356,
+      "spike_density": {
+        "2.0": 0.04,
+        "2.5": 0.025,
+        "3.0": 0.0125
+      },
+      "spike_count": {
+        "2.0": 16,
+        "2.5": 10,
+        "3.0": 5
+      },
+      "volatility_mean": 7.32447,
+      "volatility_trend_slope": 1.308339,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.778,
+          "power": 121768.78
+        },
+        {
+          "period_gaps": 3.738,
+          "power": 116503.284
+        },
+        {
+          "period_gaps": 5.263,
+          "power": 95842.992
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 4,
+      "bounds": [
+        2290,
+        2728
+      ],
+      "length": 438,
+      "mean": 9.958904,
+      "variance": 54.327078,
+      "skew": 1.425493,
+      "kurtosis_excess_internal": 2.244288,
+      "kurtosis_peak_boundary": 7.530146,
+      "spike_density": {
+        "2.0": 0.04794520547945205,
+        "2.5": 0.03424657534246575,
+        "3.0": 0.0182648401826484
+      },
+      "spike_count": {
+        "2.0": 21,
+        "2.5": 15,
+        "3.0": 8
+      },
+      "volatility_mean": 7.28858,
+      "volatility_trend_slope": -0.812196,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 3.62,
+          "power": 130592.468
+        },
+        {
+          "period_gaps": 29.2,
+          "power": 124156.352
+        },
+        {
+          "period_gaps": 2.826,
+          "power": 121838.772
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 5,
+      "bounds": [
+        2728,
+        3314
+      ],
+      "length": 586,
+      "mean": 10.40273,
+      "variance": 56.72518,
+      "skew": 1.502777,
+      "kurtosis_excess_internal": 3.231782,
+      "kurtosis_peak_boundary": 7.74514,
+      "spike_density": {
+        "2.0": 0.04778156996587031,
+        "2.5": 0.032423208191126277,
+        "3.0": 0.013651877133105802
+      },
+      "spike_count": {
+        "2.0": 28,
+        "2.5": 19,
+        "3.0": 8
+      },
+      "volatility_mean": 7.502016,
+      "volatility_trend_slope": 0.155847,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.593,
+          "power": 207360.944
+        },
+        {
+          "period_gaps": 2.7,
+          "power": 201629.329
+        },
+        {
+          "period_gaps": 2.263,
+          "power": 133423.368
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 6,
+      "bounds": [
+        3314,
+        3715
+      ],
+      "length": 401,
+      "mean": 10.174564,
+      "variance": 73.874764,
+      "skew": 2.436705,
+      "kurtosis_excess_internal": 10.35967,
+      "kurtosis_peak_boundary": 14.697035,
+      "spike_density": {
+        "2.0": 0.04738154613466334,
+        "2.5": 0.0199501246882793,
+        "3.0": 0.012468827930174564
+      },
+      "spike_count": {
+        "2.0": 19,
+        "2.5": 8,
+        "3.0": 5
+      },
+      "volatility_mean": 8.601805,
+      "volatility_trend_slope": -1.604067,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 3.234,
+          "power": 153742.687
+        },
+        {
+          "period_gaps": 2.24,
+          "power": 144199.046
+        },
+        {
+          "period_gaps": 5.897,
+          "power": 132065.381
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 7,
+      "bounds": [
+        3715,
+        4120
+      ],
+      "length": 405,
+      "mean": 10.696296,
+      "variance": 67.317641,
+      "skew": 1.887285,
+      "kurtosis_excess_internal": 5.074655,
+      "kurtosis_peak_boundary": 10.641463,
+      "spike_density": {
+        "2.0": 0.044444444444444446,
+        "2.5": 0.024691358024691357,
+        "3.0": 0.019753086419753086
+      },
+      "spike_count": {
+        "2.0": 18,
+        "2.5": 10,
+        "3.0": 8
+      },
+      "volatility_mean": 8.047029,
+      "volatility_trend_slope": 0.013244,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.166,
+          "power": 146759.392
+        },
+        {
+          "period_gaps": 2.341,
+          "power": 118680.578
+        },
+        {
+          "period_gaps": 8.617,
+          "power": 110648.08
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 8,
+      "bounds": [
+        4120,
+        4521
+      ],
+      "length": 401,
+      "mean": 10.453865,
+      "variance": 61.649368,
+      "skew": 1.89253,
+      "kurtosis_excess_internal": 5.304316,
+      "kurtosis_peak_boundary": 7.738184,
+      "spike_density": {
+        "2.0": 0.04239401496259352,
+        "2.5": 0.022443890274314215,
+        "3.0": 0.014962593516209476
+      },
+      "spike_count": {
+        "2.0": 17,
+        "2.5": 9,
+        "3.0": 6
+      },
+      "volatility_mean": 7.900408,
+      "volatility_trend_slope": -2.9432,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 4.831,
+          "power": 177598.934
+        },
+        {
+          "period_gaps": 3.713,
+          "power": 174631.055
+        },
+        {
+          "period_gaps": 4.609,
+          "power": 128782.427
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 9,
+      "bounds": [
+        4521,
+        4921
+      ],
+      "length": 400,
+      "mean": 11.025,
+      "variance": 80.079375,
+      "skew": 2.017367,
+      "kurtosis_excess_internal": 5.77616,
+      "kurtosis_peak_boundary": 8.887234,
+      "spike_density": {
+        "2.0": 0.0525,
+        "2.5": 0.0275,
+        "3.0": 0.0175
+      },
+      "spike_count": {
+        "2.0": 21,
+        "2.5": 11,
+        "3.0": 7
+      },
+      "volatility_mean": 8.73934,
+      "volatility_trend_slope": -1.856856,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.21,
+          "power": 264090.211
+        },
+        {
+          "period_gaps": 2.094,
+          "power": 193849.207
+        },
+        {
+          "period_gaps": 7.407,
+          "power": 131282.294
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 10,
+      "bounds": [
+        4921,
+        5683
+      ],
+      "length": 762,
+      "mean": 10.84252,
+      "variance": 62.329531,
+      "skew": 1.232361,
+      "kurtosis_excess_internal": 1.645869,
+      "kurtosis_peak_boundary": 4.887804,
+      "spike_density": {
+        "2.0": 0.045931758530183726,
+        "2.5": 0.01968503937007874,
+        "3.0": 0.010498687664041995
+      },
+      "spike_count": {
+        "2.0": 35,
+        "2.5": 15,
+        "3.0": 8
+      },
+      "volatility_mean": 7.89128,
+      "volatility_trend_slope": -0.728849,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 3.215,
+          "power": 268269.585
+        },
+        {
+          "period_gaps": 2.771,
+          "power": 240987.673
+        },
+        {
+          "period_gaps": 2.854,
+          "power": 224113.06
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 11,
+      "bounds": [
+        5683,
+        6084
+      ],
+      "length": 401,
+      "mean": 10.698254,
+      "variance": 69.537378,
+      "skew": 1.783456,
+      "kurtosis_excess_internal": 4.523,
+      "kurtosis_peak_boundary": 6.329448,
+      "spike_density": {
+        "2.0": 0.05236907730673317,
+        "2.5": 0.022443890274314215,
+        "3.0": 0.0199501246882793
+      },
+      "spike_count": {
+        "2.0": 21,
+        "2.5": 9,
+        "3.0": 8
+      },
+      "volatility_mean": 8.218303,
+      "volatility_trend_slope": 2.747101,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 3.342,
+          "power": 178376.74
+        },
+        {
+          "period_gaps": 3.893,
+          "power": 149409.828
+        },
+        {
+          "period_gaps": 3.427,
+          "power": 136314.643
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 12,
+      "bounds": [
+        6084,
+        6545
+      ],
+      "length": 461,
+      "mean": 11.40564,
+      "variance": 72.575153,
+      "skew": 1.42927,
+      "kurtosis_excess_internal": 2.088154,
+      "kurtosis_peak_boundary": 7.106981,
+      "spike_density": {
+        "2.0": 0.05639913232104121,
+        "2.5": 0.03036876355748373,
+        "3.0": 0.019522776572668113
+      },
+      "spike_count": {
+        "2.0": 26,
+        "2.5": 14,
+        "3.0": 9
+      },
+      "volatility_mean": 8.47908,
+      "volatility_trend_slope": -0.126629,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.031,
+          "power": 219220.771
+        },
+        {
+          "period_gaps": 2.04,
+          "power": 162720.188
+        },
+        {
+          "period_gaps": 2.59,
+          "power": 158004.702
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 13,
+      "bounds": [
+        6545,
+        7004
+      ],
+      "length": 459,
+      "mean": 11.254902,
+      "variance": 67.706267,
+      "skew": 1.311087,
+      "kurtosis_excess_internal": 1.813882,
+      "kurtosis_peak_boundary": 1.971837,
+      "spike_density": {
+        "2.0": 0.06753812636165578,
+        "2.5": 0.026143790849673203,
+        "3.0": 0.0196078431372549
+      },
+      "spike_count": {
+        "2.0": 31,
+        "2.5": 12,
+        "3.0": 9
+      },
+      "volatility_mean": 8.305863,
+      "volatility_trend_slope": 2.798625,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 3.558,
+          "power": 170652.088
+        },
+        {
+          "period_gaps": 3.504,
+          "power": 155462.437
+        },
+        {
+          "period_gaps": 3.02,
+          "power": 132603.905
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 14,
+      "bounds": [
+        7004,
+        7472
+      ],
+      "length": 468,
+      "mean": 11.008547,
+      "variance": 69.957192,
+      "skew": 1.551209,
+      "kurtosis_excess_internal": 2.806749,
+      "kurtosis_peak_boundary": 2.650662,
+      "spike_density": {
+        "2.0": 0.057692307692307696,
+        "2.5": 0.029914529914529916,
+        "3.0": 0.014957264957264958
+      },
+      "spike_count": {
+        "2.0": 27,
+        "2.5": 14,
+        "3.0": 7
+      },
+      "volatility_mean": 8.514238,
+      "volatility_trend_slope": 0.995614,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.721,
+          "power": 180629.326
+        },
+        {
+          "period_gaps": 18.0,
+          "power": 166375.708
+        },
+        {
+          "period_gaps": 2.819,
+          "power": 146326.837
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 15,
+      "bounds": [
+        7472,
+        8118
+      ],
+      "length": 646,
+      "mean": 11.250774,
+      "variance": 76.268382,
+      "skew": 1.598197,
+      "kurtosis_excess_internal": 3.422987,
+      "kurtosis_peak_boundary": 3.982059,
+      "spike_density": {
+        "2.0": 0.04489164086687306,
+        "2.5": 0.029411764705882353,
+        "3.0": 0.018575851393188854
+      },
+      "spike_count": {
+        "2.0": 29,
+        "2.5": 19,
+        "3.0": 12
+      },
+      "volatility_mean": 8.577749,
+      "volatility_trend_slope": 1.54549,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 4.037,
+          "power": 394055.746
+        },
+        {
+          "period_gaps": 2.658,
+          "power": 312209.76
+        },
+        {
+          "period_gaps": 3.076,
+          "power": 257188.202
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 16,
+      "bounds": [
+        8118,
+        8666
+      ],
+      "length": 548,
+      "mean": 11.635036,
+      "variance": 83.093079,
+      "skew": 1.574984,
+      "kurtosis_excess_internal": 2.973174,
+      "kurtosis_peak_boundary": 6.55665,
+      "spike_density": {
+        "2.0": 0.058394160583941604,
+        "2.5": 0.03102189781021898,
+        "3.0": 0.021897810218978103
+      },
+      "spike_count": {
+        "2.0": 32,
+        "2.5": 17,
+        "3.0": 12
+      },
+      "volatility_mean": 9.2311,
+      "volatility_trend_slope": 0.846385,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.713,
+          "power": 296868.389
+        },
+        {
+          "period_gaps": 4.724,
+          "power": 258039.72
+        },
+        {
+          "period_gaps": 5.592,
+          "power": 228447.877
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 17,
+      "bounds": [
+        8666,
+        9282
+      ],
+      "length": 616,
+      "mean": 11.142857,
+      "variance": 77.797774,
+      "skew": 1.689872,
+      "kurtosis_excess_internal": 3.857063,
+      "kurtosis_peak_boundary": 13.008524,
+      "spike_density": {
+        "2.0": 0.05357142857142857,
+        "2.5": 0.02922077922077922,
+        "3.0": 0.016233766233766232
+      },
+      "spike_count": {
+        "2.0": 33,
+        "2.5": 18,
+        "3.0": 10
+      },
+      "volatility_mean": 8.698923,
+      "volatility_trend_slope": -0.813466,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 7.333,
+          "power": 342762.989
+        },
+        {
+          "period_gaps": 4.464,
+          "power": 223081.126
+        },
+        {
+          "period_gaps": 2.775,
+          "power": 211954.634
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 18,
+      "bounds": [
+        9282,
+        9865
+      ],
+      "length": 583,
+      "mean": 11.602058,
+      "variance": 77.714713,
+      "skew": 1.418834,
+      "kurtosis_excess_internal": 2.715917,
+      "kurtosis_peak_boundary": 3.708496,
+      "spike_density": {
+        "2.0": 0.048027444253859346,
+        "2.5": 0.0274442538593482,
+        "3.0": 0.010291595197255575
+      },
+      "spike_count": {
+        "2.0": 28,
+        "2.5": 16,
+        "3.0": 6
+      },
+      "volatility_mean": 8.559378,
+      "volatility_trend_slope": -1.651926,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 3.151,
+          "power": 257486.606
+        },
+        {
+          "period_gaps": 2.99,
+          "power": 204560.925
+        },
+        {
+          "period_gaps": 3.81,
+          "power": 193133.61
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 19,
+      "bounds": [
+        9865,
+        10335
+      ],
+      "length": 470,
+      "mean": 11.885106,
+      "variance": 94.25914,
+      "skew": 1.831514,
+      "kurtosis_excess_internal": 4.354675,
+      "kurtosis_peak_boundary": 7.188906,
+      "spike_density": {
+        "2.0": 0.04893617021276596,
+        "2.5": 0.027659574468085105,
+        "3.0": 0.023404255319148935
+      },
+      "spike_count": {
+        "2.0": 23,
+        "2.5": 13,
+        "3.0": 11
+      },
+      "volatility_mean": 9.535719,
+      "volatility_trend_slope": 1.964032,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 6.62,
+          "power": 237351.624
+        },
+        {
+          "period_gaps": 3.643,
+          "power": 169103.576
+        },
+        {
+          "period_gaps": 2.017,
+          "power": 162595.704
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 20,
+      "bounds": [
+        10335,
+        10810
+      ],
+      "length": 475,
+      "mean": 11.583158,
+      "variance": 85.00519,
+      "skew": 1.608903,
+      "kurtosis_excess_internal": 3.162438,
+      "kurtosis_peak_boundary": 7.451732,
+      "spike_density": {
+        "2.0": 0.042105263157894736,
+        "2.5": 0.03368421052631579,
+        "3.0": 0.014736842105263158
+      },
+      "spike_count": {
+        "2.0": 20,
+        "2.5": 16,
+        "3.0": 7
+      },
+      "volatility_mean": 9.349508,
+      "volatility_trend_slope": -0.0547,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 13.971,
+          "power": 302251.661
+        },
+        {
+          "period_gaps": 2.596,
+          "power": 182067.158
+        },
+        {
+          "period_gaps": 3.654,
+          "power": 179325.923
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 21,
+      "bounds": [
+        10810,
+        11350
+      ],
+      "length": 540,
+      "mean": 11.840741,
+      "variance": 87.211674,
+      "skew": 1.599195,
+      "kurtosis_excess_internal": 2.981745,
+      "kurtosis_peak_boundary": 3.992695,
+      "spike_density": {
+        "2.0": 0.04259259259259259,
+        "2.5": 0.037037037037037035,
+        "3.0": 0.020370370370370372
+      },
+      "spike_count": {
+        "2.0": 23,
+        "2.5": 20,
+        "3.0": 11
+      },
+      "volatility_mean": 9.335347,
+      "volatility_trend_slope": 1.087448,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 3.017,
+          "power": 217558.307
+        },
+        {
+          "period_gaps": 3.418,
+          "power": 217174.082
+        },
+        {
+          "period_gaps": 2.857,
+          "power": 203125.265
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 22,
+      "bounds": [
+        11350,
+        11750
+      ],
+      "length": 400,
+      "mean": 11.445,
+      "variance": 80.821975,
+      "skew": 1.702289,
+      "kurtosis_excess_internal": 4.042556,
+      "kurtosis_peak_boundary": 4.919052,
+      "spike_density": {
+        "2.0": 0.055,
+        "2.5": 0.025,
+        "3.0": 0.02
+      },
+      "spike_count": {
+        "2.0": 22,
+        "2.5": 10,
+        "3.0": 8
+      },
+      "volatility_mean": 8.909306,
+      "volatility_trend_slope": 0.314491,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.41,
+          "power": 204185.265
+        },
+        {
+          "period_gaps": 3.2,
+          "power": 189206.688
+        },
+        {
+          "period_gaps": 2.198,
+          "power": 166414.067
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 23,
+      "bounds": [
+        11750,
+        12226
+      ],
+      "length": 476,
+      "mean": 11.613445,
+      "variance": 78.909399,
+      "skew": 1.511497,
+      "kurtosis_excess_internal": 2.542651,
+      "kurtosis_peak_boundary": 6.009745,
+      "spike_density": {
+        "2.0": 0.05042016806722689,
+        "2.5": 0.03361344537815126,
+        "3.0": 0.01680672268907563
+      },
+      "spike_count": {
+        "2.0": 24,
+        "2.5": 16,
+        "3.0": 8
+      },
+      "volatility_mean": 9.077988,
+      "volatility_trend_slope": -0.869076,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 4.76,
+          "power": 234291.651
+        },
+        {
+          "period_gaps": 4.288,
+          "power": 209633.926
+        },
+        {
+          "period_gaps": 3.606,
+          "power": 189365.114
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 24,
+      "bounds": [
+        12226,
+        12641
+      ],
+      "length": 415,
+      "mean": 11.971084,
+      "variance": 89.348561,
+      "skew": 1.718312,
+      "kurtosis_excess_internal": 4.475587,
+      "kurtosis_peak_boundary": 3.674185,
+      "spike_density": {
+        "2.0": 0.04578313253012048,
+        "2.5": 0.02650602409638554,
+        "3.0": 0.012048192771084338
+      },
+      "spike_count": {
+        "2.0": 19,
+        "2.5": 11,
+        "3.0": 5
+      },
+      "volatility_mean": 9.483043,
+      "volatility_trend_slope": 1.349822,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 3.217,
+          "power": 236364.113
+        },
+        {
+          "period_gaps": 6.103,
+          "power": 208573.634
+        },
+        {
+          "period_gaps": 7.685,
+          "power": 173150.547
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 25,
+      "bounds": [
+        12641,
+        13251
+      ],
+      "length": 610,
+      "mean": 11.711475,
+      "variance": 79.510196,
+      "skew": 1.41413,
+      "kurtosis_excess_internal": 1.872787,
+      "kurtosis_peak_boundary": 8.038041,
+      "spike_density": {
+        "2.0": 0.060655737704918035,
+        "2.5": 0.02622950819672131,
+        "3.0": 0.01639344262295082
+      },
+      "spike_count": {
+        "2.0": 37,
+        "2.5": 16,
+        "3.0": 10
+      },
+      "volatility_mean": 8.939401,
+      "volatility_trend_slope": -1.078194,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.891,
+          "power": 307283.768
+        },
+        {
+          "period_gaps": 2.319,
+          "power": 255930.625
+        },
+        {
+          "period_gaps": 6.854,
+          "power": 225340.954
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 26,
+      "bounds": [
+        13251,
+        13722
+      ],
+      "length": 471,
+      "mean": 12.284501,
+      "variance": 79.978507,
+      "skew": 1.2929,
+      "kurtosis_excess_internal": 2.023571,
+      "kurtosis_peak_boundary": 3.480181,
+      "spike_density": {
+        "2.0": 0.03821656050955414,
+        "2.5": 0.027600849256900213,
+        "3.0": 0.010615711252653927
+      },
+      "spike_count": {
+        "2.0": 18,
+        "2.5": 13,
+        "3.0": 5
+      },
+      "volatility_mean": 8.534548,
+      "volatility_trend_slope": -1.916302,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 6.038,
+          "power": 228331.164
+        },
+        {
+          "period_gaps": 2.243,
+          "power": 220962.619
+        },
+        {
+          "period_gaps": 2.075,
+          "power": 199660.187
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 27,
+      "bounds": [
+        13722,
+        14123
+      ],
+      "length": 401,
+      "mean": 11.381546,
+      "variance": 84.804547,
+      "skew": 1.699161,
+      "kurtosis_excess_internal": 4.11785,
+      "kurtosis_peak_boundary": 6.811587,
+      "spike_density": {
+        "2.0": 0.059850374064837904,
+        "2.5": 0.02493765586034913,
+        "3.0": 0.014962593516209476
+      },
+      "spike_count": {
+        "2.0": 24,
+        "2.5": 10,
+        "3.0": 6
+      },
+      "volatility_mean": 9.056733,
+      "volatility_trend_slope": 0.649545,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.97,
+          "power": 254724.053
+        },
+        {
+          "period_gaps": 2.099,
+          "power": 157496.803
+        },
+        {
+          "period_gaps": 3.893,
+          "power": 145513.159
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 28,
+      "bounds": [
+        14123,
+        14657
+      ],
+      "length": 534,
+      "mean": 12.191011,
+      "variance": 101.469133,
+      "skew": 2.173637,
+      "kurtosis_excess_internal": 7.884918,
+      "kurtosis_peak_boundary": 15.866434,
+      "spike_density": {
+        "2.0": 0.04307116104868914,
+        "2.5": 0.035580524344569285,
+        "3.0": 0.0149812734082397
+      },
+      "spike_count": {
+        "2.0": 23,
+        "2.5": 19,
+        "3.0": 8
+      },
+      "volatility_mean": 9.863543,
+      "volatility_trend_slope": 0.509083,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.078,
+          "power": 486712.164
+        },
+        {
+          "period_gaps": 3.787,
+          "power": 357162.345
+        },
+        {
+          "period_gaps": 4.768,
+          "power": 312706.822
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 29,
+      "bounds": [
+        14657,
+        15087
+      ],
+      "length": 430,
+      "mean": 12.074419,
+      "variance": 90.171206,
+      "skew": 1.758184,
+      "kurtosis_excess_internal": 4.416675,
+      "kurtosis_peak_boundary": 5.954185,
+      "spike_density": {
+        "2.0": 0.044186046511627906,
+        "2.5": 0.027906976744186046,
+        "3.0": 0.018604651162790697
+      },
+      "spike_count": {
+        "2.0": 19,
+        "2.5": 12,
+        "3.0": 8
+      },
+      "volatility_mean": 9.5526,
+      "volatility_trend_slope": 0.107399,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.986,
+          "power": 384676.262
+        },
+        {
+          "period_gaps": 3.772,
+          "power": 266660.682
+        },
+        {
+          "period_gaps": 2.019,
+          "power": 264711.652
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 30,
+      "bounds": [
+        15087,
+        15488
+      ],
+      "length": 401,
+      "mean": 12.518703,
+      "variance": 96.828204,
+      "skew": 1.52093,
+      "kurtosis_excess_internal": 2.436646,
+      "kurtosis_peak_boundary": 6.031696,
+      "spike_density": {
+        "2.0": 0.04738154613466334,
+        "2.5": 0.03740648379052369,
+        "3.0": 0.012468827930174564
+      },
+      "spike_count": {
+        "2.0": 19,
+        "2.5": 15,
+        "3.0": 5
+      },
+      "volatility_mean": 9.943222,
+      "volatility_trend_slope": -0.588861,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 4.312,
+          "power": 180483.283
+        },
+        {
+          "period_gaps": 11.139,
+          "power": 155979.469
+        },
+        {
+          "period_gaps": 2.491,
+          "power": 143124.177
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 31,
+      "bounds": [
+        15488,
+        16006
+      ],
+      "length": 518,
+      "mean": 12.061776,
+      "variance": 88.660276,
+      "skew": 1.939518,
+      "kurtosis_excess_internal": 6.305066,
+      "kurtosis_peak_boundary": 6.727362,
+      "spike_density": {
+        "2.0": 0.032818532818532815,
+        "2.5": 0.02702702702702703,
+        "3.0": 0.013513513513513514
+      },
+      "spike_count": {
+        "2.0": 17,
+        "2.5": 14,
+        "3.0": 7
+      },
+      "volatility_mean": 9.588368,
+      "volatility_trend_slope": 1.088665,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 3.548,
+          "power": 262262.243
+        },
+        {
+          "period_gaps": 2.67,
+          "power": 208188.532
+        },
+        {
+          "period_gaps": 12.047,
+          "power": 207986.249
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 32,
+      "bounds": [
+        16006,
+        16407
+      ],
+      "length": 401,
+      "mean": 11.685786,
+      "variance": 87.392541,
+      "skew": 1.56347,
+      "kurtosis_excess_internal": 2.910469,
+      "kurtosis_peak_boundary": 9.36857,
+      "spike_density": {
+        "2.0": 0.04239401496259352,
+        "2.5": 0.032418952618453865,
+        "3.0": 0.017456359102244388
+      },
+      "spike_count": {
+        "2.0": 17,
+        "2.5": 13,
+        "3.0": 7
+      },
+      "volatility_mean": 9.344813,
+      "volatility_trend_slope": -2.203249,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 3.133,
+          "power": 169361.892
+        },
+        {
+          "period_gaps": 2.015,
+          "power": 150044.229
+        },
+        {
+          "period_gaps": 2.111,
+          "power": 140433.843
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 33,
+      "bounds": [
+        16407,
+        16807
+      ],
+      "length": 400,
+      "mean": 12.16,
+      "variance": 94.8744,
+      "skew": 1.501744,
+      "kurtosis_excess_internal": 2.520099,
+      "kurtosis_peak_boundary": 5.138145,
+      "spike_density": {
+        "2.0": 0.0525,
+        "2.5": 0.03,
+        "3.0": 0.0225
+      },
+      "spike_count": {
+        "2.0": 21,
+        "2.5": 12,
+        "3.0": 9
+      },
+      "volatility_mean": 9.305897,
+      "volatility_trend_slope": 0.719983,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.41,
+          "power": 232040.714
+        },
+        {
+          "period_gaps": 3.478,
+          "power": 174371.182
+        },
+        {
+          "period_gaps": 7.547,
+          "power": 171366.422
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 34,
+      "bounds": [
+        16807,
+        17516
+      ],
+      "length": 709,
+      "mean": 11.977433,
+      "variance": 98.019237,
+      "skew": 2.15553,
+      "kurtosis_excess_internal": 7.252378,
+      "kurtosis_peak_boundary": 12.628828,
+      "spike_density": {
+        "2.0": 0.039492242595204514,
+        "2.5": 0.023977433004231313,
+        "3.0": 0.015514809590973202
+      },
+      "spike_count": {
+        "2.0": 28,
+        "2.5": 17,
+        "3.0": 11
+      },
+      "volatility_mean": 10.035342,
+      "volatility_trend_slope": -1.014442,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 10.275,
+          "power": 443585.707
+        },
+        {
+          "period_gaps": 7.463,
+          "power": 372198.857
+        },
+        {
+          "period_gaps": 6.06,
+          "power": 368728.922
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 35,
+      "bounds": [
+        17516,
+        18130
+      ],
+      "length": 614,
+      "mean": 12.416938,
+      "variance": 93.311505,
+      "skew": 1.466036,
+      "kurtosis_excess_internal": 2.426259,
+      "kurtosis_peak_boundary": 3.973635,
+      "spike_density": {
+        "2.0": 0.04723127035830619,
+        "2.5": 0.029315960912052116,
+        "3.0": 0.019543973941368076
+      },
+      "spike_count": {
+        "2.0": 29,
+        "2.5": 18,
+        "3.0": 12
+      },
+      "volatility_mean": 9.654129,
+      "volatility_trend_slope": -0.670034,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.417,
+          "power": 379851.714
+        },
+        {
+          "period_gaps": 2.291,
+          "power": 260410.45
+        },
+        {
+          "period_gaps": 2.06,
+          "power": 251380.719
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 36,
+      "bounds": [
+        18130,
+        18594
+      ],
+      "length": 464,
+      "mean": 12.271552,
+      "variance": 108.865915,
+      "skew": 1.949579,
+      "kurtosis_excess_internal": 4.978947,
+      "kurtosis_peak_boundary": 8.246761,
+      "spike_density": {
+        "2.0": 0.05387931034482758,
+        "2.5": 0.03017241379310345,
+        "3.0": 0.021551724137931036
+      },
+      "spike_count": {
+        "2.0": 25,
+        "2.5": 14,
+        "3.0": 10
+      },
+      "volatility_mean": 10.570853,
+      "volatility_trend_slope": -0.732322,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.242,
+          "power": 414971.042
+        },
+        {
+          "period_gaps": 2.994,
+          "power": 307147.896
+        },
+        {
+          "period_gaps": 2.937,
+          "power": 254196.459
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 37,
+      "bounds": [
+        18594,
+        18995
+      ],
+      "length": 401,
+      "mean": 11.870324,
+      "variance": 78.008122,
+      "skew": 1.19985,
+      "kurtosis_excess_internal": 1.151434,
+      "kurtosis_peak_boundary": 4.005612,
+      "spike_density": {
+        "2.0": 0.06234413965087282,
+        "2.5": 0.02743142144638404,
+        "3.0": 0.012468827930174564
+      },
+      "spike_count": {
+        "2.0": 25,
+        "2.5": 11,
+        "3.0": 5
+      },
+      "volatility_mean": 8.617676,
+      "volatility_trend_slope": 0.781125,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.927,
+          "power": 167668.87
+        },
+        {
+          "period_gaps": 2.179,
+          "power": 132549.818
+        },
+        {
+          "period_gaps": 5.013,
+          "power": 126563.632
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 38,
+      "bounds": [
+        18995,
+        19395
+      ],
+      "length": 400,
+      "mean": 12.715,
+      "variance": 102.818775,
+      "skew": 2.008701,
+      "kurtosis_excess_internal": 6.008309,
+      "kurtosis_peak_boundary": 10.539345,
+      "spike_density": {
+        "2.0": 0.045,
+        "2.5": 0.0275,
+        "3.0": 0.015
+      },
+      "spike_count": {
+        "2.0": 18,
+        "2.5": 11,
+        "3.0": 6
+      },
+      "volatility_mean": 9.635563,
+      "volatility_trend_slope": -1.243243,
+      "volatility_trend_direction": "decreasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.759,
+          "power": 427134.294
+        },
+        {
+          "period_gaps": 4.082,
+          "power": 210989.436
+        },
+        {
+          "period_gaps": 3.125,
+          "power": 210721.516
+        }
+      ],
+      "low_confidence": false
+    },
+    {
+      "index": 39,
+      "bounds": [
+        19395,
+        19999
+      ],
+      "length": 604,
+      "mean": 12.201987,
+      "variance": 103.489003,
+      "skew": 1.961334,
+      "kurtosis_excess_internal": 5.315581,
+      "kurtosis_peak_boundary": 9.849802,
+      "spike_density": {
+        "2.0": 0.04304635761589404,
+        "2.5": 0.028145695364238412,
+        "3.0": 0.014900662251655629
+      },
+      "spike_count": {
+        "2.0": 26,
+        "2.5": 17,
+        "3.0": 9
+      },
+      "volatility_mean": 10.138851,
+      "volatility_trend_slope": 0.688192,
+      "volatility_trend_direction": "increasing",
+      "fft_top_peaks": [
+        {
+          "period_gaps": 4.611,
+          "power": 367889.671
+        },
+        {
+          "period_gaps": 9.015,
+          "power": 319611.083
+        },
+        {
+          "period_gaps": 3.799,
+          "power": 285609.718
+        }
+      ],
+      "low_confidence": false
+    }
+  ]
+}
