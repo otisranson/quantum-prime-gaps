@@ -188,3 +188,47 @@ Max gap size grows 36 → 52 → 72 across regimes (close to, not exactly, the 3
 2. **The sliding-window jump-ratio test uses a single nearest-step comparison per changepoint**, not a proper null distribution over where "unusual" jumps occur throughout the full 38-window series — a rigorous version would ask "how often does *any* randomly chosen position show a jump this large," not just eyeball the one ratio number at each of the three known positions. Not built here; flagged as the natural next step if this specific finding gets pursued further.
 3. **The log-fit detrend's functional form (`a·ln(global_index+2)+b`) is one reasonable choice**, matching this file's own Layer 1 "regime spacing ~ ln(N)" framing, but wasn't compared against other plausible growth models (e.g. a power law) — the "survives detrending" conclusion is conditional on this specific detrending choice.
 4. **Same regime-definition and scope caveats as every other check in this file** — post-4211 tail excluded, window-index-to-gap-index mapping is the same 1:1 approximation used throughout.
+
+## Changepoint Character Comparison
+
+**Date:** August 17, 2026 (system clock reports August 18, 2026 UTC for the run timestamp/commit below — same session).
+
+**Framing:** the Kurtosis Robustness Check above found the sliding-window kurtosis test jumps sharply at changepoints 2501 and 4211 (4.9x and 4.3x the typical local step) but shows no unusual jump at 1529 (0.56x, below median). This asks what distinguishes 1529 from the other two: a weaker version of the same kind of transition, or a fundamentally different kind of changepoint. See `layer3_changepoint_1529_investigation.py` and `output/prime/20260818_013309/{layer3_changepoint_comparison.png,layer3_changepoint_breakdown_table.png,results.json}`.
+
+**1. Original detection evidence** (re-running the exact binary-segmentation detector `regime_fit_5k.py` originally used — least-squares mean-shift cost on the MI rolling mean, K=100 — reproduced the same three changepoints `[1529, 2501, 4211]` exactly, confirmed by an in-script assertion):
+
+| changepoint | binary-seg gain | MI level-shift magnitude | envelope-fit residual (window = a·ln(k)+b) |
+|---|---|---|---|
+| 1529 | 0.02716 (**smallest**) | 0.01085 | +173.2 |
+| 2501 | 0.04529 | 0.00855 (**smallest**) | −469.4 (**largest magnitude**) |
+| 4211 | 0.07179 (largest) | 0.01166 (largest) | +296.1 |
+
+**Mixed — 1529 is not cleanly "the weak one" by the original evidence.** By binary-segmentation gain (the direct cost-reduction the detector itself optimizes), 1529 is indeed the weakest of the three, consistent with the sliding-window kurtosis result. But by the other two original-evidence measures, 2501 is the outlier instead: 2501 has the *smallest* MI level-shift magnitude (smaller than 1529's) and by far the worst envelope-fit residual (−469.4, roughly 1.6–2.7x larger in magnitude than the other two). So "1529 was always the weakest by the original criteria" is not accurate — it's weakest by one specific measure (gain) and not by two others.
+
+**2. Level / scale / shape breakdown** (before vs. after, window=300 gaps each side, bootstrap 95% CI, n_boot=2000, seed=42):
+
+| changepoint | level (mean) | scale (variance) | shape (kurtosis) |
+|---|---|---|---|
+| 1529 | 9.4067→9.5000, no sig. shift | 45.26→44.40, no sig. shift | 1.2617→2.1013, no sig. shift |
+| 2501 | 9.7333→10.2067, no sig. shift | 55.00→51.94, no sig. shift | 4.9671→2.1609, no sig. shift |
+| 4211 | 10.6667→10.3600, no sig. shift | 64.46→62.62, no sig. shift | 2.8336→6.0628, no sig. shift |
+
+**No significant shift in level, scale, or shape at any of the three changepoints, at this local scale — including at 2501 and 4211**, which is worth flagging rather than quietly reconciling: it does **not** contradict the Kurtosis Robustness Check's finding of real jumps at 2501/4211, it's a power problem specific to this narrower test. A ±300-gap window is a much smaller sample than the ~970–1710-point full regimes the earlier bootstrap CIs were built on, and kurtosis in particular has high sampling variance at n=300 (e.g. 2501's "before" shape CI spans [1.59, 8.73] — wide enough to swallow almost any plausible after-value). This test, as built, cannot detect the effect the coarser regime-scale and sliding-window tests already found — it isn't evidence against that effect, just an underpowered instrument for it at this local scale.
+
+**3. Fine-grained local kurtosis scan** (width=150, step=25, across ±300 gaps around each changepoint):
+
+| changepoint | local kurtosis range | peak offset | peak kurtosis |
+|---|---|---|---|
+| 1529 | [0.573, 3.180] | **+0** (right at the changepoint) | 3.180 |
+| 2501 | [1.031, 7.294] | −225 (before the changepoint) | 7.294 |
+| 4211 | [1.456, 7.272] | +75 (just after the changepoint) | 7.272 |
+
+**This is the most direct answer to the question this script asks.** 1529 is not "nothing" — it has a genuine local kurtosis peak, and that peak sits exactly at offset 0, right at the changepoint itself, same qualitative signature as the other two. What's different is magnitude: 1529's peak (3.18) is roughly **2.3x smaller** than 2501's (7.29) or 4211's (7.27), which are close to each other. There's no sign of a delayed or offset transition near 1529 that the coarse regime cut missed — the local structure that exists is centered right where the changepoint already is, just weaker.
+
+**Answer, stated as directly as the evidence allows: 1529 looks like a weaker version of the same kind of transition, not a fundamentally different kind of changepoint.** It shows the same signature (a local kurtosis peak located at the changepoint) as 2501 and 4211, just proportionally smaller (~2.3x), and the "weakest of the three" framing from the sliding-window test only holds up cleanly on one of the three original-detection measures (gain) — on the other two (MI level-shift, envelope-fit residual), 2501 is actually the more unusual point. This is a real distinction in degree, not evidence of two categorically different mechanisms — but it's a moderate-confidence read, not a proven one; see caveats.
+
+**Caveats:**
+1. **The level/scale/shape breakdown (point 2) was underpowered by construction** at window=300 — it should not be read as "no shift exists at 2501/4211," only as "this specific local test at this specific window size can't detect the shift the other tests found." A proper resolution would sweep window size (e.g. 300, 500, 750, 1000) to find where the bootstrap CIs start separating, rather than picking one size and reporting a null.
+2. **"Weakest by gain" being the one original criterion that agrees with the newer kurtosis result is itself worth treating cautiously** — gain is the binary-segmentation detector's own optimization target on the MI rolling mean, a different signal entirely from the raw-gap kurtosis tested later. That the two happen to agree on 1529 could be a real shared cause or could be coincidence at n=3; not resolved here.
+3. **The fine local scan's "peak offset" is a single argmax over a fairly coarse fine-grained series** (19 points per changepoint, width=150/step=25) — a true peak location and its uncertainty weren't estimated with a CI; small perturbations to width/step could shift the reported offset by one or two steps (25–50 gaps) without changing the qualitative conclusion (1529's peak is near-zero-offset and smaller than the other two).
+4. **Same regime-definition and scope caveats as every other check in this file apply** — window-index-to-gap-index mapping is the same 1:1 approximation used throughout, and no cross-regime similarity claim is made or retested here.
