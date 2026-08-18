@@ -209,6 +209,7 @@ def main() -> None:
     out_path = out_dir / "mi_changepoints_sim_20k.json"
     out_path.write_text(json.dumps(payload, indent=2))
     print(f"\nSaved to {out_path.relative_to(REPO_ROOT)}")
+    print(f"RESULTS_JSON_PATH: {out_path}")
 
     auto_commit_push(out_dir, len(accepted), ts)
 

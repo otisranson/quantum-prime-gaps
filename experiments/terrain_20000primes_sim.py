@@ -404,8 +404,9 @@ def main() -> None:
     print("  -> mi_waveform_20k.png")
 
     print("Saving JSON...")
-    save_json(records, period_info, primes, ts, out_dir, wall_clock_seconds)
+    results_path = save_json(records, period_info, primes, ts, out_dir, wall_clock_seconds)
     print("  -> results_20000primes.json")
+    print(f"RESULTS_JSON_PATH: {results_path}")
 
     auto_commit_push(ts)
     print()
