@@ -88,3 +88,37 @@ MI landscape overall: mean=0.1256, std=0.1030, min=0.0198 (group 13), max=0.4080
 ## Status
 
 **Updated August 17, 2026, after both empirical checks above.** Internal-wave / self-affinity hypothesis ("regimes rhyme") has two independent negative results now: the MI-landscape probe (inconclusive, no consistent alignment) and the direct regime-overlay test (refuted, with the regimes significantly *less* alike than chance — bottom ~1st percentile against a random-slice null, both raw and detrended). No test run so far supports "regimes rhyme." The anti-similarity finding in the overlay test is unexplained and flagged as worth a closer look, not as confirmation of any alternative claim.
+
+## Follow-up — Per-Regime Characterization (not a retest of "rhyme")
+
+**Date:** August 17, 2026 (system clock reports August 18, 2026 UTC for the run timestamp/commit below — same session).
+
+**Framing, stated up front:** the Regime Overlay check above refuted cross-regime shape matching — the three regimes are significantly *less* alike than random chance (bottom ~1st percentile, both raw and detrended). This follow-up does not retest that claim and does not attempt any cross-regime comparison, similarity score, or null test. Given the regimes don't rhyme, the natural next question is simply what each one actually looks like on its own terms. Each regime is treated as an independent object here. See `layer3_regime_characterization.py` and `output/prime/20260818_010500/{layer3_characterization_panels.png,layer3_characterization_table.png,results.json}`. Same regime definitions as the refutation test: `[0,1529)`, `[1529,2501)`, `[2501,4211)` in raw gap-index space, post-4211 tail excluded.
+
+**Summary table (all metrics computed independently per regime, no shared normalization):**
+
+| metric | regime 0 (n=1529) | regime 1 (n=972) | regime 2 (n=1710) |
+|---|---|---|---|
+| spike density (\|z\|>2, own mean/std) | 0.0517 (79 spikes) | 0.0453 (44 spikes) | 0.0427 (73 spikes) |
+| volatility mean (rolling std, K=100) | 6.0242 | 7.2701 | 7.8669 |
+| volatility trend (slope, own fractional position) | +2.6685 (increasing) | +0.6477 (increasing) | +1.2020 (increasing) |
+| FFT top period (gap-steps/cycle) | 1529.0 (see note) | 2.298 | 5.917 |
+| FFT 2nd/3rd period | 2.092 / 2.795 | 4.320 / 2.641 | 2.595 / 2.339 |
+| skew | 1.4960 | 1.5719 | 1.8864 |
+| excess kurtosis | 2.4216 | 3.2232 | 6.0411 |
+| mean gap | 8.3891 | 9.7942 | 10.3801 |
+| variance | 37.1677 | 53.7848 | 62.7304 |
+
+**Observations, stated descriptively (no significance claims — none were tested here by design):**
+
+- **Mean and variance climb monotonically with regime index** (8.39→9.79→10.38 mean; 37.2→53.8→62.7 variance). This tracks the Prime Number Theorem's expected average-gap growth with N and isn't itself a new finding — flagged for completeness, not as a discovery.
+- **All three regimes are right-skewed with positive excess kurtosis** (heavier-tailed than normal), and both skew and kurtosis increase with regime index (kurtosis 2.42→3.22→6.04 — regime 2 is markedly heavier-tailed). Read alongside the next point, this says the *size* of the largest outliers is growing faster than their *count*.
+- **Spike density (fixed at 2 own-sigma) is flat-to-slightly-declining across regimes** (0.052→0.045→0.043) even as kurtosis roughly triples. Since the z-score threshold is regime-relative, this isn't a contradiction — it means each regime has a similar *rate* of 2-sigma-plus events, but later regimes' extreme events are more extreme relative to their own spread, not more frequent.
+- **Volatility (rolling std) increases within every regime** (all three trend slopes positive), but regime 0's internal ramp (+2.67) is roughly 2–4x steeper than regime 1 (+0.65) or regime 2 (+1.20) — regime 0 goes from calm to volatile faster, internally, than the later two.
+- **FFT dominant period — caveat before the number:** the FFT here only removes each regime's mean, not its trend, before the periodogram. Regime 0's top peak landing at period=1529.0 — exactly its own length — is very likely an artifact of its own steep volatility/trend ramp (see above) dumping power into the lowest-frequency bin, not a genuine full-regime cycle; its 2nd and 3rd peaks (period ≈2.09, 2.80) are the more informative ones. Regimes 1 and 2 don't show this artifact — their top peaks are all short (2.3–5.9 gap-steps), consistent with the well-known short-range alternation/parity structure general to prime gap sequences (not specific to these regimes or this circuit). None of the three regimes show a long-period genuine oscillation once the trend artifact in regime 0 is discounted.
+
+**Caveats:**
+1. **Purely descriptive by design** — no null distributions, no significance tests, no p-values anywhere in this follow-up; none of the numbers above should be read as "significant" or "confirmed" in the sense the refutation test's percentiles were. If any of these differences (e.g. the volatility-trend-slope gap between regime 0 and the others) look interesting enough to chase, that would need its own dedicated null test, not an extension of this one.
+2. **FFT trend artifact** (discussed above for regime 0) means "dominant period" as reported is not directly comparable across regimes without separately checking whether each regime's top peak is itself a trend artifact — only regime 0 showed this pattern here, but the check should be repeated if this table gets used for anything beyond description.
+3. **Spike/volatility/skew/kurtosis are all computed on each regime's own raw values**, not on any shared or resampled scale — by construction they cannot be used to reproduce a cross-regime similarity claim; that's the point of this follow-up, but worth restating so a future session doesn't quietly repurpose this table as a comparison.
+4. **Same regime-definition scope caveat as the refutation test applies here too** — the post-4211 tail is excluded, and window-index-to-gap-index mapping is the same 1:1 approximation used throughout this file.
