@@ -319,3 +319,29 @@ Qualitative companion to the 40-Regime Characterization above — 10 of the 40 r
 1. `local_max_gap_in_window` uses one arbitrary centered window size (K=201) — a different window changes every angle value and could strengthen, weaken, or relocate the observed 35–50° cluster; not swept here.
 2. Z-scoring each space's axes independently is one reasonable way to make flat and log-polar distances comparable at all, not the only possible normalization (e.g. min-max scaling would give a different number, possibly a different direction of effect).
 3. No null distribution was computed for either nearest-neighbor figure (e.g. "how much would 39 randomly chosen gap-indices' separation differ between flat and log-polar space by chance") — the 49% figure is descriptive, not tested against a random-changepoint baseline.
+
+## Log-Polar Cluster Exclusion Test (follow-up to the note immediately above)
+
+**Date:** August 18, 2026
+
+**Framing:** the log-polar remap note above found the 39 changepoints 49.0% tighter (mean nearest-neighbor distance, z-scored axes) in log-polar space than in flat space, and speculated this was "likely driven largely by" one visible cluster around 30–50°/large radius rather than a uniform effect. This follow-up tests that speculation directly, plus adds the null-distribution check caveat 3 above flagged as missing. See `exploration/log_polar_cluster_test.py` and `output/prime/20260818_080542/log_polar_cluster_exclusion_test.png`.
+
+**Cluster identified (programmatic, not eyeballed this time):** angle in [30°, 50°] AND radius ≥ 9.0 → **5 changepoints**, not the "~6" estimated by eye in the prior note: positions 8666, 11750, 13722, 14657, 15488. Remaining set: **34 changepoints**.
+
+**Result — the speculation in the prior note was wrong. The effect does not weaken when the cluster is excluded, it persists almost unchanged:**
+
+| | flat NN mean | log-polar NN mean | % change |
+|---|---|---|---|
+| all 39 | 0.3701 | 0.1886 | −49.0% |
+| remaining 34 (cluster excluded) | 0.3989 | 0.2009 | **−49.6%** |
+
+**Correction to the prior note's read:** stating this plainly — the prior note's "likely driven largely by" framing was a reasonable-sounding but untested guess, and this follow-up shows it doesn't hold. Removing the single densest visual cluster changes the tightening percentage by less than 1 point (49.0% → 49.6%). Whatever is producing the log-polar tightening is distributed across the remaining 34 points too, not concentrated in the 5-point cluster.
+
+**Permutation test (new, addresses caveat 3 above):** 1,000 resamples of 34 random gap-sequence indices each (seed=42), log-polar Cartesian mean NN distance computed identically for each resample (axes z-scored within each resample). Null distribution: mean=0.2434, std=0.0410. Observed remaining-34 value (0.2009) sits at the **15.9th percentile** — tighter than 84% of random draws, but not below the conventional 5th-percentile significance threshold.
+
+**Result, stated clearly: weak, non-significant evidence of tightening, not a confirmed effect.** The 34 remaining changepoints cluster somewhat tighter in log-polar space than random gap-indices do, but at the 15.9th percentile this is well within what chance alone plausibly produces (roughly consistent with a two-tailed p on the order of 0.3, not the p<0.05 that would usually be needed to call this a real signal). Combined with the missing-null caveat on the original all-39 comparison (never itself permutation-tested), this whole log-polar clustering line of inquiry currently has no result that clears a real significance bar — descriptively present, statistically unconfirmed.
+
+**Caveats:**
+1. The cluster definition (angle [30°,50°], radius≥9.0) is a specific, somewhat arbitrary box drawn around the point cloud that looked densest by eye in the original plot — a different box (e.g. a density-based clustering algorithm instead of a manual angle/radius rectangle) could isolate a different or larger group.
+2. The permutation null was only run for the remaining-34 case, not for the original all-39 case — so "all 39 tightening (49.0%) vs. chance" is still an open question, not just the 34-point subset's.
+3. Same `LOCAL_MAX_WINDOW=201` and z-scoring caveats as the prior note apply unchanged here — this follow-up reuses both without re-testing them.
