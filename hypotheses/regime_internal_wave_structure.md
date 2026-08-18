@@ -122,3 +122,69 @@ MI landscape overall: mean=0.1256, std=0.1030, min=0.0198 (group 13), max=0.4080
 2. **FFT trend artifact** (discussed above for regime 0) means "dominant period" as reported is not directly comparable across regimes without separately checking whether each regime's top peak is itself a trend artifact — only regime 0 showed this pattern here, but the check should be repeated if this table gets used for anything beyond description.
 3. **Spike/volatility/skew/kurtosis are all computed on each regime's own raw values**, not on any shared or resampled scale — by construction they cannot be used to reproduce a cross-regime similarity claim; that's the point of this follow-up, but worth restating so a future session doesn't quietly repurpose this table as a comparison.
 4. **Same regime-definition scope caveat as the refutation test applies here too** — the post-4211 tail is excluded, and window-index-to-gap-index mapping is the same 1:1 approximation used throughout this file.
+
+## Kurtosis Robustness Check
+
+**Date:** August 17, 2026 (system clock reports August 18, 2026 UTC for the run timestamp/commit below — same session).
+
+**Framing:** the Characterization follow-up above found excess kurtosis climbing across the three regimes (2.42 → 3.22 → 6.04) while 2-sigma spike density stayed roughly flat-to-declining (0.0517 → 0.0453 → 0.0427) — outlier gaps aren't more frequent later, but they're more extreme when they occur. This check tests whether that pattern is robust or an artifact, along five axes, none of which retest cross-regime similarity (that stays refuted, see above). See `layer3_kurtosis_robustness.py` and `output/prime/20260818_012118/{layer3_kurtosis_robustness_overview.png,layer3_kurtosis_sliding_window.png,results.json}`. Same regime definitions throughout: `[0,1529)`, `[1529,2501)`, `[2501,4211)`.
+
+**Verdict up front, since the five checks disagree with each other: MIXED.** Two axes support the original finding being real and not an artifact; one axis (the CIs) says the point-estimate ordering is statistically weaker than it first looked; one axis (sliding window) gives partial, not clean, support. Detail below.
+
+**1. Bootstrap CIs (n=2000 resamples, seed=42, 95% percentile CI):**
+
+| | kurtosis (point) | kurtosis 95% CI | spike density (point) | spike density 95% CI |
+|---|---|---|---|---|
+| regime 0 | 2.4216 | [1.8052, 3.0995] | 0.0517 | [0.0438, 0.0641] |
+| regime 1 | 3.2232 | [1.7260, 4.9057] | 0.0453 | [0.0381, 0.0607] |
+| regime 2 | 6.0411 | [3.0358, 9.2943] | 0.0427 | [0.0380, 0.0550] |
+
+**All three regimes' CIs overlap pairwise, for both kurtosis and spike density** (0v1, 1v2, and 0v2 all overlap = True). **This is the one result that pushes back on the original finding**: given sampling uncertainty at these regime sizes (n=1529, 972, 1710), the point-estimate ordering (rising kurtosis, declining density) is not statistically well-separated — a single bootstrap resample could plausibly reorder any adjacent pair. The 0-vs-2 kurtosis comparison is the closest call (regime 0's upper bound 3.0995 vs. regime 2's lower bound 3.0358 — overlapping by only 0.0637, the narrowest margin of the three pairs), so the endpoints of the progression are the least implausible to be genuinely different, but "closest to non-overlapping" is not the same as non-overlapping.
+
+**2. Threshold robustness (spike density at 2.0 / 2.5 / 3.0 sigma):**
+
+| sigma | regime 0 | regime 1 | regime 2 |
+|---|---|---|---|
+| 2.0 | 0.0517 | 0.0453 | 0.0427 |
+| 2.5 | 0.0360 | 0.0309 | 0.0193 |
+| 3.0 | 0.0190 | 0.0154 | 0.0146 |
+
+**Holds at all three thresholds, not just 2-sigma** — spike density is monotonically non-increasing from regime 0 to regime 2 at every threshold tested (and the decline actually gets *proportionally* sharper at higher thresholds, e.g. regime 2's density roughly halves going 2.0→2.5 sigma while regime 0's drops less). This is evidence *for* the original finding being real rather than a threshold-specific artifact.
+
+**3. Sliding-window kurtosis (width=500, step=100, across the full [0, 4211) range, regime boundaries ignored):** 38 windows, kurtosis ranging [1.5762, 9.2746]. Step-to-step jump size at each changepoint's position, compared to the median absolute step size everywhere else in the same series (0.3601):
+
+| changepoint | jump at this position | median \|step\| elsewhere | ratio |
+|---|---|---|---|
+| 1529 | 0.2015 | 0.3601 | 0.56x (**below** the typical step) |
+| 2501 | 1.7623 | 0.3601 | 4.89x |
+| 4211 | 1.5519 | 0.3601 | 4.31x |
+
+**Mixed, not clean confirmation either way.** If kurtosis rose as one smooth continuous drift unrelated to the changepoints, none of the three positions should show an unusual jump. Two of three changepoints (2501, 4211) show jumps 4–5x larger than the typical local step — consistent with a real, localized, regime-specific effect at those two boundaries. But the first changepoint (1529) shows *no* unusual jump at all (actually below the median step size elsewhere) — inconsistent with "kurtosis jumps specifically at changepoints" as a universal rule. Stated plainly: this test supports a regime-specific effect at two of the three boundaries and gives no support at the third.
+
+**4. Background-growth control (local log-fit detrend, `gap ~ a·ln(global_index+2)+b`, fit separately per regime, then kurtosis recomputed on the gap/trend ratio):**
+
+| | fit a | fit b | original kurtosis | detrended kurtosis |
+|---|---|---|---|---|
+| regime 0 | 1.1239 | 1.2634 | 2.4216 | 2.1020 (−13.2%) |
+| regime 1 | 0.6327 | 4.9860 | 3.2232 | 3.1916 (−1.0%) |
+| regime 2 | 1.0011 | 2.2630 | 6.0411 | 5.9440 (−1.6%) |
+
+**Survives detrending — the kurtosis rise is not explained by ordinary gap-size growth alone.** Dividing out each regime's own local logarithmic growth trend barely moves kurtosis for regimes 1 and 2 (~1–2% change) and only a modest 13% drop for regime 0; the 2.10 → 3.19 → 5.94 progression after detrending is essentially the same shape as the original 2.42 → 3.22 → 6.04. This is evidence *for* the original finding being a real distributional-shape effect, not an artifact of typical gap size simply growing with N.
+
+**5/6. Max and mean gap size per regime, for growth context:**
+
+| | max gap | mean gap | max/mean ratio |
+|---|---|---|---|
+| regime 0 | 36.0 | 8.3891 | 4.29x |
+| regime 1 | 52.0 | 9.7942 | 5.31x |
+| regime 2 | 72.0 | 10.3801 | 6.93x |
+
+Max gap size grows 36 → 52 → 72 across regimes (close to, not exactly, the 35/50/~70 recalled in this session's prompt). The max/mean ratio itself climbs (4.29x → 5.31x → 6.93x) — another way of restating the kurtosis finding: the largest gaps are pulling further away from the typical gap, relative to the typical gap, in later regimes.
+
+**Net read:** two of five checks (threshold robustness, background-growth control) support the original "rising kurtosis, flat-to-declining spike density" finding as real. One check (bootstrap CIs) says the point-estimate ordering isn't statistically well-separated at these sample sizes — treat "kurtosis rises with regime index" as a real descriptive pattern in this data, not (yet) a statistically confirmed one. One check (sliding window) gives partial support — localized jumps at 2 of 3 changepoints, no jump at the third. This is not a clean confirm or refute; both directions of caution belong in any future claim built on the original finding.
+
+**Caveats:**
+1. **Bootstrap here is a standard nonparametric bootstrap treating each regime's gap values as exchangeable/iid** — it resamples values, not blocks of the sequence, so it doesn't account for whatever serial correlation exists along the gap sequence. If gaps are autocorrelated within a regime, this bootstrap's CIs could be too narrow (understating uncertainty) or too wide, in either direction — not verified here.
+2. **The sliding-window jump-ratio test uses a single nearest-step comparison per changepoint**, not a proper null distribution over where "unusual" jumps occur throughout the full 38-window series — a rigorous version would ask "how often does *any* randomly chosen position show a jump this large," not just eyeball the one ratio number at each of the three known positions. Not built here; flagged as the natural next step if this specific finding gets pursued further.
+3. **The log-fit detrend's functional form (`a·ln(global_index+2)+b`) is one reasonable choice**, matching this file's own Layer 1 "regime spacing ~ ln(N)" framing, but wasn't compared against other plausible growth models (e.g. a power law) — the "survives detrending" conclusion is conditional on this specific detrending choice.
+4. **Same regime-definition and scope caveats as every other check in this file** — post-4211 tail excluded, window-index-to-gap-index mapping is the same 1:1 approximation used throughout.
