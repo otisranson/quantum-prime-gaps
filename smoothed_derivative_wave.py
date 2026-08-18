@@ -15,7 +15,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-RESULTS_PATH = Path("output/prime/20260816_010716/terrain_5000primes/results_5000primes.json")
+GAPS_CACHE_PATH = Path("data/primes_5000.json")
 OUT_PATH = Path("output/prime/analysis/smoothed_derivative_wave.png")
 KNOWN_CHANGEPOINTS = [1529, 2501, 4211]
 K = 100
@@ -27,11 +27,8 @@ def rolling_mean(x: np.ndarray, k: int) -> np.ndarray:
 
 
 def main() -> None:
-    with open(RESULTS_PATH) as f:
-        data = json.load(f)
-
-    per_window = data["per_window"]
-    full_gaps = np.array([r["gaps"][0] for r in per_window] + per_window[-1]["gaps"][1:])
+    with open(GAPS_CACHE_PATH) as f:
+        full_gaps = np.array(json.load(f)["gaps"])
 
     smoothed = rolling_mean(full_gaps, K)
     deriv = np.diff(smoothed)

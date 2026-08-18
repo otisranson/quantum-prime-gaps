@@ -40,7 +40,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 REPO_ROOT = Path(__file__).parent
-RESULTS_PATH = REPO_ROOT / "output/prime/20260816_010716/terrain_5000primes/results_5000primes.json"
+GAPS_CACHE_PATH = REPO_ROOT / "data/primes_5000.json"
 KNOWN_CHANGEPOINTS = [1529, 2501, 4211]
 REGIME_LABELS = ["regime 0", "regime 1", "regime 2"]
 REGIME_COLORS = ["#4c72b0", "#e08214", "#2a9d5c"]
@@ -55,10 +55,8 @@ OUT_ROOT = REPO_ROOT / "output" / "prime"
 
 
 def load_full_gaps() -> np.ndarray:
-    with open(RESULTS_PATH) as f:
-        data = json.load(f)
-    per_window = data["per_window"]
-    return np.array([r["gaps"][0] for r in per_window] + per_window[-1]["gaps"][1:])
+    with open(GAPS_CACHE_PATH) as f:
+        return np.array(json.load(f)["gaps"])
 
 
 def excess_kurtosis(x: np.ndarray, axis: int = -1) -> np.ndarray:
@@ -280,7 +278,7 @@ def main() -> None:
 
     results = {
         "timestamp": ts,
-        "results_source": str(RESULTS_PATH.relative_to(REPO_ROOT)),
+        "results_source": str(GAPS_CACHE_PATH.relative_to(REPO_ROOT)),
         "regime_bounds": bounds,
         "config": {"n_boot": N_BOOT, "seed": SEED, "thresholds": THRESHOLDS,
                    "slide_width": SLIDE_WIDTH, "slide_step": SLIDE_STEP},

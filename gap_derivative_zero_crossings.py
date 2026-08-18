@@ -20,22 +20,17 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-RESULTS_PATH = Path("output/prime/20260816_010716/terrain_5000primes/results_5000primes.json")
+GAPS_CACHE_PATH = Path("data/primes_5000.json")
 OUT_PATH = Path("output/prime/analysis/gap_derivative_zero_crossings.png")
 KNOWN_CHANGEPOINTS = [1529, 2501, 4211]
 PROXIMITY = 50
 
 
 def main() -> None:
-    with open(RESULTS_PATH) as f:
-        data = json.load(f)
-
-    per_window = data["per_window"]
-    # Reconstruct the full gap sequence: window w starts at gap index w
-    # (windows slide by 1, window_size=4), so gap[i] = per_window[i]['gaps'][0]
-    # for i in range(n_windows), plus the trailing 3 gaps of the last window.
-    full_gaps = np.array([r["gaps"][0] for r in per_window] + per_window[-1]["gaps"][1:])
-    assert len(full_gaps) == data["config"]["n_gaps"]
+    with open(GAPS_CACHE_PATH) as f:
+        cache = json.load(f)
+    full_gaps = np.array(cache["gaps"])
+    assert len(full_gaps) == cache["n_gaps"]
 
     # Step 1: derivative (Dimension 2)
     deriv = np.diff(full_gaps)

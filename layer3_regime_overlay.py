@@ -17,7 +17,7 @@ changepoint, so it isn't "bounded by the changepoints" the way the other
 three are. Flagged again in the caveats section below.
 
 Reads the same 5000-prime run other regime-change scripts in this repo use
-(RESULTS_PATH below); reconstructs the continuous raw gap sequence from its
+(GAPS_CACHE_PATH below); reconstructs the continuous raw gap sequence from its
 per-window data the same way smoothed_derivative_wave.py does.
 
 Run: python layer3_regime_overlay.py
@@ -31,7 +31,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-RESULTS_PATH = Path("output/prime/20260816_010716/terrain_5000primes/results_5000primes.json")
+GAPS_CACHE_PATH = Path("data/primes_5000.json")
 OUT_PATH = Path("output/prime/analysis/layer3_regime_overlay.png")
 JSON_OUT_PATH = Path("output/prime/analysis/layer3_regime_overlay.json")
 KNOWN_CHANGEPOINTS = [1529, 2501, 4211]
@@ -42,10 +42,8 @@ REGIME_COLORS = ["#4c72b0", "#e08214", "#2a9d5c"]
 
 
 def load_full_gaps() -> np.ndarray:
-    with open(RESULTS_PATH) as f:
-        data = json.load(f)
-    per_window = data["per_window"]
-    return np.array([r["gaps"][0] for r in per_window] + per_window[-1]["gaps"][1:])
+    with open(GAPS_CACHE_PATH) as f:
+        return np.array(json.load(f)["gaps"])
 
 
 def resample_and_zscore(y: np.ndarray, n: int) -> np.ndarray:
@@ -70,7 +68,7 @@ def mean_pairwise_corr(curves: list[np.ndarray]) -> tuple[float, list[float]]:
 
 def main() -> None:
     full_gaps = load_full_gaps()
-    print(f"Loaded {len(full_gaps)} raw gaps from {RESULTS_PATH}")
+    print(f"Loaded {len(full_gaps)} raw gaps from {GAPS_CACHE_PATH}")
 
     bounds = [(0, KNOWN_CHANGEPOINTS[0]), (KNOWN_CHANGEPOINTS[0], KNOWN_CHANGEPOINTS[1]),
               (KNOWN_CHANGEPOINTS[1], KNOWN_CHANGEPOINTS[2])]
@@ -162,7 +160,7 @@ def main() -> None:
     print(f"\nSaved figure to {OUT_PATH}")
 
     results = {
-        "results_source": str(RESULTS_PATH),
+        "results_source": str(GAPS_CACHE_PATH),
         "changepoints": KNOWN_CHANGEPOINTS,
         "regime_bounds": bounds,
         "regime_lengths": lengths,
