@@ -7,6 +7,12 @@ consecutive terms. A second figure looks at the rolling variance of that
 rate of change at two window sizes, and at the residual left after
 dividing out the PNT-predicted (1/(n ln n))^2 decay envelope.
 
+A third figure fits f(n) = a/(n ln n) to 1/p_n (PNT-motivated, scaling
+constant a free), then inverts the fit to compare predicted vs. actual
+prime *positions* -- p_n_actual - n*ln(n)/a -- and normalizes that
+position residual by n*ln(n) to check whether the log-scale fit fully
+explains prime position or leaves real structure behind.
+
 Reads data/primes_20000.json (the existing 20k-prime cache built by
 build_prime_cache.py) -- does not regenerate primes.
 
@@ -22,11 +28,13 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
+from scipy.optimize import curve_fit
 
 PRIMES_CACHE_PATH = Path("data/primes_20000.json")
 OUT_DIR = Path("output/prime") / datetime.now().strftime("%Y%m%d_%H%M%S")
 OUT_PATH = OUT_DIR / "reciprocal_prime_analysis.png"
 VARIANCE_OUT_PATH = OUT_DIR / "reciprocal_prime_variance.png"
+RESIDUALS_OUT_PATH = OUT_DIR / "reciprocal_prime_residuals.png"
 
 
 def load_primes() -> np.ndarray:
@@ -37,6 +45,10 @@ def load_primes() -> np.ndarray:
 def rolling_variance(x: np.ndarray, window: int) -> np.ndarray:
     """Trailing rolling variance; output[i] covers x[i : i + window]."""
     return sliding_window_view(x, window).var(axis=1, ddof=0)
+
+
+def reciprocal_model(n: np.ndarray, a: float) -> np.ndarray:
+    return a / (n * np.log(n))
 
 
 def main() -> None:
@@ -111,6 +123,46 @@ def main() -> None:
 
     fig2.savefig(VARIANCE_OUT_PATH, dpi=150)
     print(f"Saved plot to {VARIANCE_OUT_PATH}")
+
+    # n=1 (p_1=2) is excluded: ln(1)=0 makes a/(n ln n) undefined there
+    n = (index + 1)[1:]
+    p_actual = primes[1:]
+    recip_actual = reciprocals[1:]
+
+    (a,), _ = curve_fit(reciprocal_model, n, recip_actual, p0=[1.0])
+    recip_fitted = reciprocal_model(n, a)
+
+    p_predicted = n * np.log(n) / a
+    position_residual = p_actual - p_predicted
+    normalized_residual = position_residual / (n * np.log(n))
+
+    fig3, (ax_fit, ax_resid, ax_norm) = plt.subplots(1, 3, figsize=(20, 6))
+
+    ax_fit.plot(n, recip_actual, lw=0.8, color="#4c72b0", label="actual 1/p")
+    ax_fit.plot(n, recip_fitted, lw=1.2, color="#c44e52", label=f"fit: a/(n ln n), a={a:.4f}")
+    ax_fit.set_yscale("log")
+    ax_fit.set_xlabel("n")
+    ax_fit.set_ylabel("1/p")
+    ax_fit.set_title("Curve fit: a/(n ln n)")
+    ax_fit.legend()
+
+    ax_resid.plot(n, position_residual, lw=0.8, color="#2a9d5c")
+    ax_resid.axhline(0, color="black", lw=0.6, ls="--")
+    ax_resid.set_xlabel("n")
+    ax_resid.set_ylabel(r"$p_n^{actual} - p_n^{predicted}$")
+    ax_resid.set_title("Position residual")
+
+    ax_norm.plot(n, normalized_residual, lw=0.8, color="#e08214")
+    ax_norm.axhline(0, color="black", lw=0.6, ls="--")
+    ax_norm.set_xlabel("n")
+    ax_norm.set_ylabel(r"residual / $(n \ln n)$")
+    ax_norm.set_title("Normalized position residual")
+
+    fig3.suptitle(f"Log-fit position residuals over first {len(primes):,} primes")
+    fig3.tight_layout()
+
+    fig3.savefig(RESIDUALS_OUT_PATH, dpi=150)
+    print(f"Saved plot to {RESIDUALS_OUT_PATH}")
 
 
 if __name__ == "__main__":
