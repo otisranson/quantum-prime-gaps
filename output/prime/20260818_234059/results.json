@@ -1,0 +1,365 @@
+{
+  "timestamp": "20260818_234059",
+  "entropy_results_source": "output/prime/20260818_224457/results.json",
+  "mi_changepoints_source": "/home/oranson/Projects/quantum-prime-gaps/output/prime/20260818_234057/mi_changepoints_sim_20k.json",
+  "mi_detector_config": {
+    "rolling_k": 100,
+    "min_size": 400,
+    "n_perm_stop": 200,
+    "stop_percentile": 99.0,
+    "max_splits": 100,
+    "seed": 42
+  },
+  "n_flagged_windows": 39,
+  "n_changepoints": 37,
+  "n_contained": 10,
+  "sim_mi_containment_rate": 0.27027,
+  "null_permutations": 100000,
+  "seed": 42,
+  "closed_form_domain_coverage": 0.16375,
+  "expected_contained_under_null": 6.059,
+  "n_significant_p_lt_0_05": 3,
+  "expected_false_positives_no_correction": 1.85,
+  "overlap": [
+    {
+      "changepoint": 499,
+      "nearest_flagged_window_center": 150.0,
+      "nearest_flagged_window_start": 100,
+      "nearest_flagged_window_end": 200,
+      "distance": 349.0,
+      "contained": false,
+      "null_p_value": 0.72723
+    },
+    {
+      "changepoint": 920,
+      "nearest_flagged_window_center": 1350.0,
+      "nearest_flagged_window_start": 1300,
+      "nearest_flagged_window_end": 1400,
+      "distance": 430.0,
+      "contained": false,
+      "null_p_value": 0.80787
+    },
+    {
+      "changepoint": 1531,
+      "nearest_flagged_window_center": 1525.0,
+      "nearest_flagged_window_start": 1475,
+      "nearest_flagged_window_end": 1575,
+      "distance": 6.0,
+      "contained": true,
+      "null_p_value": 0.02493
+    },
+    {
+      "changepoint": 1976,
+      "nearest_flagged_window_center": 2150.0,
+      "nearest_flagged_window_start": 2100,
+      "nearest_flagged_window_end": 2200,
+      "distance": 174.0,
+      "contained": false,
+      "null_p_value": 0.46014
+    },
+    {
+      "changepoint": 2514,
+      "nearest_flagged_window_center": 2225.0,
+      "nearest_flagged_window_start": 2175,
+      "nearest_flagged_window_end": 2275,
+      "distance": 289.0,
+      "contained": false,
+      "null_p_value": 0.65367
+    },
+    {
+      "changepoint": 3194,
+      "nearest_flagged_window_center": 3200.0,
+      "nearest_flagged_window_start": 3150,
+      "nearest_flagged_window_end": 3250,
+      "distance": 6.0,
+      "contained": true,
+      "null_p_value": 0.02493
+    },
+    {
+      "changepoint": 3595,
+      "nearest_flagged_window_center": 3200.0,
+      "nearest_flagged_window_start": 3150,
+      "nearest_flagged_window_end": 3250,
+      "distance": 395.0,
+      "contained": false,
+      "null_p_value": 0.7758
+    },
+    {
+      "changepoint": 4011,
+      "nearest_flagged_window_center": 4025.0,
+      "nearest_flagged_window_start": 3975,
+      "nearest_flagged_window_end": 4075,
+      "distance": 14.0,
+      "contained": true,
+      "null_p_value": 0.05565
+    },
+    {
+      "changepoint": 4930,
+      "nearest_flagged_window_center": 4550.0,
+      "nearest_flagged_window_start": 4500,
+      "nearest_flagged_window_end": 4600,
+      "distance": 380.0,
+      "contained": false,
+      "null_p_value": 0.76003
+    },
+    {
+      "changepoint": 5534,
+      "nearest_flagged_window_center": 6125.0,
+      "nearest_flagged_window_start": 6075,
+      "nearest_flagged_window_end": 6175,
+      "distance": 591.0,
+      "contained": false,
+      "null_p_value": 0.92437
+    },
+    {
+      "changepoint": 6173,
+      "nearest_flagged_window_center": 6125.0,
+      "nearest_flagged_window_start": 6075,
+      "nearest_flagged_window_end": 6175,
+      "distance": 48.0,
+      "contained": true,
+      "null_p_value": 0.15901
+    },
+    {
+      "changepoint": 6777,
+      "nearest_flagged_window_center": 6350.0,
+      "nearest_flagged_window_start": 6300,
+      "nearest_flagged_window_end": 6400,
+      "distance": 427.0,
+      "contained": false,
+      "null_p_value": 0.80551
+    },
+    {
+      "changepoint": 7177,
+      "nearest_flagged_window_center": 7700.0,
+      "nearest_flagged_window_start": 7650,
+      "nearest_flagged_window_end": 7750,
+      "distance": 523.0,
+      "contained": false,
+      "null_p_value": 0.88358
+    },
+    {
+      "changepoint": 7728,
+      "nearest_flagged_window_center": 7700.0,
+      "nearest_flagged_window_start": 7650,
+      "nearest_flagged_window_end": 7750,
+      "distance": 28.0,
+      "contained": true,
+      "null_p_value": 0.09912
+    },
+    {
+      "changepoint": 8134,
+      "nearest_flagged_window_center": 8525.0,
+      "nearest_flagged_window_start": 8475,
+      "nearest_flagged_window_end": 8575,
+      "distance": 391.0,
+      "contained": false,
+      "null_p_value": 0.77143
+    },
+    {
+      "changepoint": 8828,
+      "nearest_flagged_window_center": 8950.0,
+      "nearest_flagged_window_start": 8900,
+      "nearest_flagged_window_end": 9000,
+      "distance": 122.0,
+      "contained": false,
+      "null_p_value": 0.34683
+    },
+    {
+      "changepoint": 9326,
+      "nearest_flagged_window_center": 9225.0,
+      "nearest_flagged_window_start": 9175,
+      "nearest_flagged_window_end": 9275,
+      "distance": 101.0,
+      "contained": false,
+      "null_p_value": 0.29647
+    },
+    {
+      "changepoint": 9726,
+      "nearest_flagged_window_center": 9850.0,
+      "nearest_flagged_window_start": 9800,
+      "nearest_flagged_window_end": 9900,
+      "distance": 124.0,
+      "contained": false,
+      "null_p_value": 0.35146
+    },
+    {
+      "changepoint": 10167,
+      "nearest_flagged_window_center": 10400.0,
+      "nearest_flagged_window_start": 10350,
+      "nearest_flagged_window_end": 10450,
+      "distance": 233.0,
+      "contained": false,
+      "null_p_value": 0.56469
+    },
+    {
+      "changepoint": 10568,
+      "nearest_flagged_window_center": 10400.0,
+      "nearest_flagged_window_start": 10350,
+      "nearest_flagged_window_end": 10450,
+      "distance": 168.0,
+      "contained": false,
+      "null_p_value": 0.44748
+    },
+    {
+      "changepoint": 11338,
+      "nearest_flagged_window_center": 11400.0,
+      "nearest_flagged_window_start": 11350,
+      "nearest_flagged_window_end": 11450,
+      "distance": 62.0,
+      "contained": false,
+      "null_p_value": 0.19715
+    },
+    {
+      "changepoint": 12005,
+      "nearest_flagged_window_center": 11400.0,
+      "nearest_flagged_window_start": 11350,
+      "nearest_flagged_window_end": 11450,
+      "distance": 605.0,
+      "contained": false,
+      "null_p_value": 0.93168
+    },
+    {
+      "changepoint": 12639,
+      "nearest_flagged_window_center": 12675.0,
+      "nearest_flagged_window_start": 12625,
+      "nearest_flagged_window_end": 12725,
+      "distance": 36.0,
+      "contained": true,
+      "null_p_value": 0.12452
+    },
+    {
+      "changepoint": 13213,
+      "nearest_flagged_window_center": 13750.0,
+      "nearest_flagged_window_start": 13700,
+      "nearest_flagged_window_end": 13800,
+      "distance": 537.0,
+      "contained": false,
+      "null_p_value": 0.89459
+    },
+    {
+      "changepoint": 13994,
+      "nearest_flagged_window_center": 13750.0,
+      "nearest_flagged_window_start": 13700,
+      "nearest_flagged_window_end": 13800,
+      "distance": 244.0,
+      "contained": false,
+      "null_p_value": 0.58289
+    },
+    {
+      "changepoint": 14435,
+      "nearest_flagged_window_center": 14825.0,
+      "nearest_flagged_window_start": 14775,
+      "nearest_flagged_window_end": 14875,
+      "distance": 390.0,
+      "contained": false,
+      "null_p_value": 0.77038
+    },
+    {
+      "changepoint": 14838,
+      "nearest_flagged_window_center": 14825.0,
+      "nearest_flagged_window_start": 14775,
+      "nearest_flagged_window_end": 14875,
+      "distance": 13.0,
+      "contained": true,
+      "null_p_value": 0.0525
+    },
+    {
+      "changepoint": 15350,
+      "nearest_flagged_window_center": 15350.0,
+      "nearest_flagged_window_start": 15300,
+      "nearest_flagged_window_end": 15400,
+      "distance": 0.0,
+      "contained": true,
+      "null_p_value": 0.00185
+    },
+    {
+      "changepoint": 15750,
+      "nearest_flagged_window_center": 15925.0,
+      "nearest_flagged_window_start": 15875,
+      "nearest_flagged_window_end": 15975,
+      "distance": 175.0,
+      "contained": false,
+      "null_p_value": 0.46204
+    },
+    {
+      "changepoint": 16230,
+      "nearest_flagged_window_center": 16275.0,
+      "nearest_flagged_window_start": 16225,
+      "nearest_flagged_window_end": 16325,
+      "distance": 45.0,
+      "contained": true,
+      "null_p_value": 0.15047
+    },
+    {
+      "changepoint": 16752,
+      "nearest_flagged_window_center": 16425.0,
+      "nearest_flagged_window_start": 16375,
+      "nearest_flagged_window_end": 16475,
+      "distance": 327.0,
+      "contained": false,
+      "null_p_value": 0.70396
+    },
+    {
+      "changepoint": 17250,
+      "nearest_flagged_window_center": 16425.0,
+      "nearest_flagged_window_start": 16375,
+      "nearest_flagged_window_end": 16475,
+      "distance": 825.0,
+      "contained": false,
+      "null_p_value": 0.9937
+    },
+    {
+      "changepoint": 17718,
+      "nearest_flagged_window_center": 18125.0,
+      "nearest_flagged_window_start": 18075,
+      "nearest_flagged_window_end": 18175,
+      "distance": 407.0,
+      "contained": false,
+      "null_p_value": 0.78834
+    },
+    {
+      "changepoint": 18273,
+      "nearest_flagged_window_center": 18125.0,
+      "nearest_flagged_window_start": 18075,
+      "nearest_flagged_window_end": 18175,
+      "distance": 148.0,
+      "contained": false,
+      "null_p_value": 0.40514
+    },
+    {
+      "changepoint": 18673,
+      "nearest_flagged_window_center": 18775.0,
+      "nearest_flagged_window_start": 18725,
+      "nearest_flagged_window_end": 18825,
+      "distance": 102.0,
+      "contained": false,
+      "null_p_value": 0.29875
+    },
+    {
+      "changepoint": 19073,
+      "nearest_flagged_window_center": 19100.0,
+      "nearest_flagged_window_start": 19050,
+      "nearest_flagged_window_end": 19150,
+      "distance": 27.0,
+      "contained": true,
+      "null_p_value": 0.096
+    },
+    {
+      "changepoint": 19595,
+      "nearest_flagged_window_center": 19100.0,
+      "nearest_flagged_window_start": 19050,
+      "nearest_flagged_window_end": 19150,
+      "distance": 495.0,
+      "contained": false,
+      "null_p_value": 0.86231
+    }
+  ],
+  "gap_space_comparison": {
+    "n_changepoints": 39,
+    "n_contained": 11,
+    "closed_form_domain_coverage": 0.16375,
+    "n_significant_p_lt_0_05": 3,
+    "containment_rate": 0.282051
+  }
+}
