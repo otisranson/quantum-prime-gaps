@@ -1,0 +1,147 @@
+{
+  "timestamp": "20260818_010500",
+  "results_source": "output/prime/20260816_010716/terrain_5000primes/results_5000primes.json",
+  "regime_bounds": [
+    [
+      0,
+      1529
+    ],
+    [
+      1529,
+      2501
+    ],
+    [
+      2501,
+      4211
+    ]
+  ],
+  "excluded_tail_bounds": [
+    4211,
+    4999
+  ],
+  "config": {
+    "rolling_std_window": 100,
+    "spike_z_threshold": 2.0,
+    "n_fft_peaks": 3
+  },
+  "scope_note": "Purely descriptive per-regime characterization; no cross-regime similarity scoring or null testing performed here -- see the refutation writeup for that.",
+  "regimes": [
+    {
+      "label": "regime 0",
+      "bounds": [
+        0,
+        1529
+      ],
+      "length": 1529,
+      "spike_density": 0.051668,
+      "spike_count": 79,
+      "volatility": {
+        "window": 100,
+        "mean": 6.02423,
+        "start": 3.344772,
+        "end": 6.251272,
+        "trend_slope": 2.668516,
+        "trend_direction": "increasing"
+      },
+      "fft_top_peaks": [
+        {
+          "period_gaps": 1529.0,
+          "frequency": 0.000654,
+          "power": 598962.7
+        },
+        {
+          "period_gaps": 2.092,
+          "frequency": 0.47809,
+          "power": 482554.028
+        },
+        {
+          "period_gaps": 2.795,
+          "frequency": 0.35775,
+          "power": 369928.054
+        }
+      ],
+      "skew": 1.495983,
+      "kurtosis_excess": 2.421629,
+      "mean": 8.389143,
+      "variance": 37.16773
+    },
+    {
+      "label": "regime 1",
+      "bounds": [
+        1529,
+        2501
+      ],
+      "length": 972,
+      "spike_density": 0.045267,
+      "spike_count": 44,
+      "volatility": {
+        "window": 100,
+        "mean": 7.270111,
+        "start": 6.923121,
+        "end": 7.211768,
+        "trend_slope": 0.647657,
+        "trend_direction": "increasing"
+      },
+      "fft_top_peaks": [
+        {
+          "period_gaps": 2.298,
+          "frequency": 0.435185,
+          "power": 346760.37
+        },
+        {
+          "period_gaps": 4.32,
+          "frequency": 0.231481,
+          "power": 294242.062
+        },
+        {
+          "period_gaps": 2.641,
+          "frequency": 0.378601,
+          "power": 263058.845
+        }
+      ],
+      "skew": 1.57192,
+      "kurtosis_excess": 3.22324,
+      "mean": 9.794239,
+      "variance": 53.784823
+    },
+    {
+      "label": "regime 2",
+      "bounds": [
+        2501,
+        4211
+      ],
+      "length": 1710,
+      "spike_density": 0.04269,
+      "spike_count": 73,
+      "volatility": {
+        "window": 100,
+        "mean": 7.866923,
+        "start": 7.052262,
+        "end": 7.795486,
+        "trend_slope": 1.20198,
+        "trend_direction": "increasing"
+      },
+      "fft_top_peaks": [
+        {
+          "period_gaps": 5.917,
+          "frequency": 0.169006,
+          "power": 726381.974
+        },
+        {
+          "period_gaps": 2.595,
+          "frequency": 0.38538,
+          "power": 699432.783
+        },
+        {
+          "period_gaps": 2.339,
+          "frequency": 0.427485,
+          "power": 684157.984
+        }
+      ],
+      "skew": 1.88638,
+      "kurtosis_excess": 6.041087,
+      "mean": 10.380117,
+      "variance": 62.730365
+    }
+  ]
+}
