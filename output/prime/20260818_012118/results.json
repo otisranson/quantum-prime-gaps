@@ -1,0 +1,163 @@
+{
+  "timestamp": "20260818_012118",
+  "results_source": "output/prime/20260816_010716/terrain_5000primes/results_5000primes.json",
+  "regime_bounds": [
+    [
+      0,
+      1529
+    ],
+    [
+      1529,
+      2501
+    ],
+    [
+      2501,
+      4211
+    ]
+  ],
+  "config": {
+    "n_boot": 2000,
+    "seed": 42,
+    "thresholds": [
+      2.0,
+      2.5,
+      3.0
+    ],
+    "slide_width": 500,
+    "slide_step": 100
+  },
+  "bootstrap": [
+    {
+      "regime": "regime 0",
+      "kurtosis_point": 2.421629,
+      "kurtosis_ci95": [
+        1.805193,
+        3.099457
+      ],
+      "spike_density_point": 0.051668,
+      "spike_density_ci95": [
+        0.043819,
+        0.064094
+      ]
+    },
+    {
+      "regime": "regime 1",
+      "kurtosis_point": 3.22324,
+      "kurtosis_ci95": [
+        1.725989,
+        4.905729
+      ],
+      "spike_density_point": 0.045267,
+      "spike_density_ci95": [
+        0.038066,
+        0.0607
+      ]
+    },
+    {
+      "regime": "regime 2",
+      "kurtosis_point": 6.041087,
+      "kurtosis_ci95": [
+        3.035813,
+        9.29431
+      ],
+      "spike_density_point": 0.04269,
+      "spike_density_ci95": [
+        0.038012,
+        0.054971
+      ]
+    }
+  ],
+  "ci_overlap": {
+    "0v1": {
+      "kurtosis_ci_overlap": true,
+      "spike_density_ci_overlap": true
+    },
+    "1v2": {
+      "kurtosis_ci_overlap": true,
+      "spike_density_ci_overlap": true
+    },
+    "0v2": {
+      "kurtosis_ci_overlap": true,
+      "spike_density_ci_overlap": true
+    }
+  },
+  "threshold_table": {
+    "2.0": [
+      0.051668,
+      0.045267,
+      0.04269
+    ],
+    "2.5": [
+      0.035971,
+      0.030864,
+      0.019298
+    ],
+    "3.0": [
+      0.018967,
+      0.015432,
+      0.01462
+    ]
+  },
+  "sliding_window": {
+    "n_windows": 38,
+    "kurtosis_min": 1.576157,
+    "kurtosis_max": 9.274555,
+    "changepoint_jump_ratios": {
+      "1529": {
+        "jump": 0.201478,
+        "median_abs_step_elsewhere": 0.360142,
+        "ratio": 0.559439
+      },
+      "2501": {
+        "jump": 1.762336,
+        "median_abs_step_elsewhere": 0.360142,
+        "ratio": 4.893444
+      },
+      "4211": {
+        "jump": 1.551901,
+        "median_abs_step_elsewhere": 0.360142,
+        "ratio": 4.309133
+      }
+    }
+  },
+  "background_growth_control": [
+    {
+      "regime": "regime 0",
+      "fit_a": 1.123902,
+      "fit_b": 1.263421,
+      "original_kurtosis": 2.421629,
+      "detrended_kurtosis": 2.10201
+    },
+    {
+      "regime": "regime 1",
+      "fit_a": 0.632723,
+      "fit_b": 4.98601,
+      "original_kurtosis": 3.22324,
+      "detrended_kurtosis": 3.191649
+    },
+    {
+      "regime": "regime 2",
+      "fit_a": 1.001137,
+      "fit_b": 2.262972,
+      "original_kurtosis": 6.041087,
+      "detrended_kurtosis": 5.943952
+    }
+  ],
+  "size_context": [
+    {
+      "regime": "regime 0",
+      "max_gap": 36.0,
+      "mean_gap": 8.389143
+    },
+    {
+      "regime": "regime 1",
+      "max_gap": 52.0,
+      "mean_gap": 9.794239
+    },
+    {
+      "regime": "regime 2",
+      "max_gap": 72.0,
+      "mean_gap": 10.380117
+    }
+  ]
+}
