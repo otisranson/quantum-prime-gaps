@@ -54,3 +54,37 @@ MI landscape overall: mean=0.1256, std=0.1030, min=0.0198 (group 13), max=0.4080
 3. The originally-planned Layer 3 test (raw gap sequence extracted from *within* each of the 3 real regimes, normalized, overlaid) is still the more direct test of "do the regimes rhyme" and remains unrun.
 
 **What held:** the run itself is clean — sieve-derived primes cross-checked by independent trial division, 25/25 groups completed, MI values are a real, non-trivial spread (not degenerate at 0 or a constant), consistent with a working circuit. The negative/inconclusive result is about the hypothesis, not the measurement.
+
+## Empirical Check — Regime Overlay (the originally-planned Layer 3 test)
+
+**Date checked:** August 17, 2026
+
+**Method:** This is the direct test flagged as still-unrun above — extract the raw gap sequence within each of the three regimes actually bounded by the confirmed changepoints (windows 1529, 2501, 4211), normalize each for length and amplitude, and check whether they rhyme. See `layer3_regime_overlay.py` and `output/prime/analysis/{layer3_regime_overlay.png,layer3_regime_overlay.json}`.
+
+**Regime definition, stated explicitly:** three changepoints delimit exactly three segments that have *both* a start and end changepoint (using the sequence start as the first regime's implicit open end): `[0, 1529)` (length 1529), `[1529, 2501)` (length 972), `[2501, 4211)` (length 1710). The tail after the last changepoint, `[4211, 4999)` (length 788), is excluded — it has no closing changepoint, so by the same "bounded by the changepoints" framing used everywhere else in this file, it isn't one of the three regimes under test. This is one reasonable reading, not the only possible one — see caveats.
+
+**Normalization:** each regime resampled (linear interpolation) to a common length of 500 points, then z-scored (mean 0, std 1) — so the overlay compares *shape*, not absolute gap magnitude or duration. Raw-normalized curves were overlaid first; then each was independently linear-detrended (its own best-fit line removed) and the residuals overlaid separately.
+
+**Similarity score:** mean of the three pairwise Pearson correlations between regime curves.
+
+- Raw normalized: **-0.0582** (pairwise: -0.0688, -0.0738, -0.0321)
+- Detrended residuals: **-0.0570** (pairwise: -0.0700, -0.0689, -0.0321)
+
+**Random-slice null:** 5,000 trials (seed=42), each drawing three random slices from the full 4999-gap sequence matching the real regimes' lengths (1529, 972, 1710) at independent random start positions, normalized and scored the same way.
+
+- Raw null: mean=0.0019, std=0.0257 → observed similarity (-0.0582) sits at the **0.8th percentile**
+- Detrended null: mean≈0.0000, std=0.0257 → observed similarity (-0.0570) sits at the **1.0th percentile**
+
+**Result, stated clearly: REFUTED — and in the opposite direction than predicted.** The hypothesis predicted the three regimes should rhyme (similarity *higher* than random chance). Instead, the three regimes are *less* alike than 99%+ of random same-length triplets drawn from the same sequence, in both the raw-normalized and the detrended versions. The null's own mean sitting near zero is exactly what's expected if regimes were simply independent/unrelated (no relationship either way); the actual regimes land significantly *below* that zero-relationship baseline, in the bottom ~1% tail. That the raw and detrended results are nearly identical (-0.058 vs -0.057, both in the same extreme tail) indicates this isn't an artifact of differing linear trends across regimes being picked up as spurious correlation/anti-correlation — removing each regime's own trend didn't change the picture, so the divergence is in the shapes themselves, not just their slopes.
+
+**Mismatch vs. regime index:** per-regime RMS distance of the detrended residual from the cross-regime mean residual curve: regime 0 = 0.8397, regime 1 = 0.8322, regime 2 = 0.8315. Correlation of this mismatch with regime index (0, 1, 2): **-0.9015**. **State this precisely: this number is not meaningful and should not be read as "mismatch decreases with regime index."** The three underlying values differ by about 1% of their own magnitude (0.8315–0.8397) — essentially flat — and any three points that are nearly flat with tiny monotonic noise will produce a large-magnitude Pearson r by construction, since n=3 gives the correlation almost no room to land anywhere but near ±1. This is reported because it was asked for, not because it's evidence of a real trend.
+
+**Caveats:**
+1. **Regime-definition choice.** Excluding the post-4211 tail (and using sequence-start as regime 0's open boundary) is one defensible reading of "the three regimes bounded by the changepoints," not the only one — a version that includes the tail as a fourth regime, or that uses the window-index space directly instead of mapping window index onto raw gap index 1:1 (an approximation used identically in every prior script in this file, not re-derived here), could give a different similarity score. Worth rerunning with an alternate regime definition before treating "refuted" as final.
+2. **Only linear detrending was tried.** A regime with real curvature (quadratic or higher-order drift) would still carry that shape into the "residual." That the raw and detrended results agree so closely suggests linear trend isn't the main driver either way, but higher-order detrending wasn't tested.
+3. **Null slices can overlap each other, the real regimes, or the excluded tail**, and are drawn independently rather than as a non-overlapping partition of the sequence — a reasonable and simple baseline for "how similar are three arbitrary same-length chunks of this data," but not the only possible null design.
+4. **This result is surprising enough to flag rather than just accept at face value:** significant anti-similarity (not just "no similarity") between the three regimes could reflect something structurally real about how the changepoint-detection method itself defines boundaries (e.g., changepoints might systematically fall where the *character* of the local sequence is shifting away from its neighbor, which is close to a restatement of what a changepoint is — worth being careful not to treat this as an independent confirmation of anything). It could also reflect the specific detrending/normalization choices above. Not resolved here.
+
+## Status
+
+**Updated August 17, 2026, after both empirical checks above.** Internal-wave / self-affinity hypothesis ("regimes rhyme") has two independent negative results now: the MI-landscape probe (inconclusive, no consistent alignment) and the direct regime-overlay test (refuted, with the regimes significantly *less* alike than chance — bottom ~1st percentile against a random-slice null, both raw and detrended). No test run so far supports "regimes rhyme." The anti-similarity finding in the overlay test is unexplained and flagged as worth a closer look, not as confirmation of any alternative claim.

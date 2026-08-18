@@ -1,0 +1,64 @@
+{
+  "results_source": "output/prime/20260816_010716/terrain_5000primes/results_5000primes.json",
+  "changepoints": [
+    1529,
+    2501,
+    4211
+  ],
+  "regime_bounds": [
+    [
+      0,
+      1529
+    ],
+    [
+      1529,
+      2501
+    ],
+    [
+      2501,
+      4211
+    ]
+  ],
+  "regime_lengths": [
+    1529,
+    972,
+    1710
+  ],
+  "excluded_tail_bounds": [
+    4211,
+    4999
+  ],
+  "n_resample": 500,
+  "observed": {
+    "raw_similarity": -0.058227,
+    "raw_pairs": [
+      -0.068775,
+      -0.073825,
+      -0.032083
+    ],
+    "detrended_similarity": -0.056977,
+    "detrended_pairs": [
+      -0.069977,
+      -0.068854,
+      -0.032099
+    ]
+  },
+  "mismatch": {
+    "per_regime_rms_from_mean": [
+      0.839672,
+      0.832219,
+      0.831535
+    ],
+    "correlation_with_regime_index_n3": -0.901457
+  },
+  "null": {
+    "n_trials": 5000,
+    "seed": 42,
+    "raw_mean": 0.00193,
+    "raw_std": 0.02574,
+    "raw_observed_percentile": 0.84,
+    "detrended_mean": -2.4e-05,
+    "detrended_std": 0.025678,
+    "detrended_observed_percentile": 1.02
+  }
+}
