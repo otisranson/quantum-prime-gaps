@@ -297,6 +297,11 @@ def main() -> None:
     print(f"\nSaved figure to {png_path.relative_to(REPO_ROOT)}")
 
     # ── Markdown summary ─────────────────────────────────────────────────
+    # Two independent bars, reported precisely -- do not collapse "p passed but R^2 didn't"
+    # and "R^2 passed but p didn't" into one vague "or" statement; they mean different things
+    # (statistically-detectable-but-tiny vs. plausible-effect-size-but-not-distinguishable-from-noise).
+    r2_passes = winner != "flat" and candidates[winner] > 0.1
+    p_passes = decay_null_p is not None and decay_null_p < 0.05
     if decay_found:
         damped_verdict = (
             f"**Supported.** The {winner} model beats the flat baseline (R^2={candidates[winner]:.4f} vs. 0) "
@@ -304,12 +309,23 @@ def main() -> None:
             f"this improvement at p={decay_null_p:.4f} -- unlikely to arise from an unstructured series by "
             "chance. Residual amplitude does appear to decay with N in this data."
         )
-    elif winner != "flat" and decay_null_p is not None:
+    elif winner != "flat" and p_passes and not r2_passes:
         damped_verdict = (
-            f"**Inconclusive.** The {winner} model nominally beats the flat baseline (R^2={candidates[winner]:.4f}), "
-            f"but the permutation null (p={decay_null_p:.4f}) does not clear the p<0.05 bar used here, or the "
-            f"R^2 itself is below the 0.1 threshold -- the apparent improvement over flat is not clearly "
-            "distinguishable from what an unstructured series would produce by chance at this sample size."
+            f"**Statistically significant but practically negligible.** The {winner} model's improvement "
+            f"over the flat baseline is unlikely to arise by chance (permutation p={decay_null_p:.4f}, well "
+            f"below 0.05 -- this bar was cleared), but the effect size is tiny (R^2={candidates[winner]:.4f}, "
+            "below the 0.1 threshold used here to call an effect size meaningful). With n=757 rolling-std "
+            "points, even a very small real effect can be statistically distinguishable from a shuffled null "
+            "-- that is what's happening here, not evidence of a practically meaningful decay. Read as: the "
+            f"{winner} shape is very slightly, but genuinely, better than flat -- not as: residual amplitude "
+            "meaningfully decays with N."
+        )
+    elif winner != "flat" and r2_passes and not p_passes:
+        damped_verdict = (
+            f"**Inconclusive.** The {winner} model's effect size clears the 0.1 R^2 threshold "
+            f"(R^2={candidates[winner]:.4f}), but the permutation null (p={decay_null_p:.4f}) does not clear "
+            "the p<0.05 bar -- the apparent improvement over flat is not clearly distinguishable from what an "
+            "unstructured series of this length would produce by chance."
         )
     else:
         damped_verdict = (
