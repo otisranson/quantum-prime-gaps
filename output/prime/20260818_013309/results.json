@@ -1,0 +1,209 @@
+{
+  "timestamp": "20260818_013309",
+  "results_source": "output/prime/20260816_010716/terrain_5000primes/results_5000primes.json",
+  "changepoints": [
+    1529,
+    2501,
+    4211
+  ],
+  "config": {
+    "mi_rolling_k": 100,
+    "half_window": 300,
+    "fine_width": 150,
+    "fine_step": 25,
+    "n_boot": 2000,
+    "seed": 42
+  },
+  "original_detection_evidence": {
+    "per_changepoint": [
+      {
+        "changepoint": 1529,
+        "binary_seg_gain": 0.0271622120941985,
+        "mi_mean_before": 0.161583980867133,
+        "mi_mean_after": 0.17243101210905407,
+        "mi_level_shift_abs": 0.010847031241921073,
+        "envelope_fit_residual": 173.23198200052389
+      },
+      {
+        "changepoint": 2501,
+        "binary_seg_gain": 0.04529054191631535,
+        "mi_mean_before": 0.17243101210905407,
+        "mi_mean_after": 0.16388227508187167,
+        "mi_level_shift_abs": 0.008548737027182396,
+        "envelope_fit_residual": -469.3740112536084
+      },
+      {
+        "changepoint": 4211,
+        "binary_seg_gain": 0.0717933653575113,
+        "mi_mean_before": 0.16388227508187167,
+        "mi_mean_after": 0.175540058471338,
+        "mi_level_shift_abs": 0.011657783389466325,
+        "envelope_fit_residual": 296.14202925308837
+      }
+    ],
+    "envelope_fit": {
+      "a": 2329.3840594573358,
+      "b": 1355.7680179994761
+    },
+    "weakest_by_binary_seg_gain": 1529,
+    "weakest_by_mi_level_shift": 2501,
+    "worst_envelope_fit_residual": 2501
+  },
+  "level_scale_shape_breakdown": {
+    "1529": {
+      "level": {
+        "before_point": 9.406666666666666,
+        "before_ci95": [
+          8.68,
+          10.213499999999998
+        ],
+        "after_point": 9.5,
+        "after_ci95": [
+          8.766666666666667,
+          10.246833333333331
+        ],
+        "ci_overlap": true,
+        "shifted_significantly": false
+      },
+      "scale": {
+        "before_point": 45.26128888888889,
+        "before_ci95": [
+          36.51347555555556,
+          54.13708333333332
+        ],
+        "after_point": 44.403333333333336,
+        "after_ci95": [
+          34.24175000000001,
+          54.533013333333315
+        ],
+        "ci_overlap": true,
+        "shifted_significantly": false
+      },
+      "shape": {
+        "before_point": 1.261725097862378,
+        "before_ci95": [
+          0.2994372453222232,
+          2.3482211060387224
+        ],
+        "after_point": 2.10131877804851,
+        "after_ci95": [
+          0.9391547314727243,
+          3.3596518450538797
+        ],
+        "ci_overlap": true,
+        "shifted_significantly": false
+      }
+    },
+    "2501": {
+      "level": {
+        "before_point": 9.733333333333333,
+        "before_ci95": [
+          8.919833333333333,
+          10.613499999999998
+        ],
+        "after_point": 10.206666666666667,
+        "after_ci95": [
+          9.386666666666667,
+          11.006833333333331
+        ],
+        "ci_overlap": true,
+        "shifted_significantly": false
+      },
+      "scale": {
+        "before_point": 54.99555555555555,
+        "before_ci95": [
+          40.10563888888889,
+          73.08516333333333
+        ],
+        "after_point": 51.94395555555556,
+        "after_ci95": [
+          40.47179666666666,
+          64.78631222222222
+        ],
+        "ci_overlap": true,
+        "shifted_significantly": false
+      },
+      "shape": {
+        "before_point": 4.967106898830011,
+        "before_ci95": [
+          1.5942167125968054,
+          8.732573180616717
+        ],
+        "after_point": 2.160880304743417,
+        "after_ci95": [
+          0.5733497807252198,
+          3.5540098834795972
+        ],
+        "ci_overlap": true,
+        "shifted_significantly": false
+      }
+    },
+    "4211": {
+      "level": {
+        "before_point": 10.666666666666666,
+        "before_ci95": [
+          9.813166666666666,
+          11.586833333333331
+        ],
+        "after_point": 10.36,
+        "after_ci95": [
+          9.4865,
+          11.273333333333333
+        ],
+        "ci_overlap": true,
+        "shifted_significantly": false
+      },
+      "scale": {
+        "before_point": 64.46222222222221,
+        "before_ci95": [
+          49.21760888888889,
+          81.0803122222222
+        ],
+        "after_point": 62.617066666666666,
+        "after_ci95": [
+          44.851096666666656,
+          84.04112333333329
+        ],
+        "ci_overlap": true,
+        "shifted_significantly": false
+      },
+      "shape": {
+        "before_point": 2.833620959005093,
+        "before_ci95": [
+          1.490499022283383,
+          4.253966667248767
+        ],
+        "after_point": 6.062841217803635,
+        "after_ci95": [
+          1.273137999879167,
+          9.534079716421605
+        ],
+        "ci_overlap": true,
+        "shifted_significantly": false
+      }
+    }
+  },
+  "fine_local_scan": [
+    {
+      "changepoint": 1529,
+      "kurtosis_min": 0.5734378525934742,
+      "kurtosis_max": 3.179548347543447,
+      "peak_offset": 0.0,
+      "peak_kurtosis": 3.179548347543447
+    },
+    {
+      "changepoint": 2501,
+      "kurtosis_min": 1.0304784589824978,
+      "kurtosis_max": 7.294073044798928,
+      "peak_offset": -225.0,
+      "peak_kurtosis": 7.294073044798928
+    },
+    {
+      "changepoint": 4211,
+      "kurtosis_min": 1.4563960533147533,
+      "kurtosis_max": 7.271907563502321,
+      "peak_offset": 75.0,
+      "peak_kurtosis": 7.271907563502321
+    }
+  ]
+}
