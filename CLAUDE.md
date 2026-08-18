@@ -51,12 +51,31 @@ Most scripts auto-commit and push their own output on completion; be aware a scr
 
 **Terrain visualization** (`terrain_visualizer.py`, `terrain_1000primes.py`, `terrain_5000primes.py`)
 renders per-window probability distributions as topographic maps and writes the underlying
-per-window data (MI, mode, gaps) to `output/prime/{timestamp}/results_*.json`. The regime-change /
-gap-derivative analysis scripts at the repo root (`regime_fit_5k.py`,
-`gap_derivative_zero_crossings.py`, `smoothed_gap_derivative_zero_crossings.py`,
-`layer2_magnitude_test.py`, `smoothed_derivative_wave.py`) all read directly from one of those
-existing `results_*.json` files rather than re-running the circuit — check which timestamped run a
-script points at before assuming it covers the latest data.
+per-window data (MI, mode, gaps) to `output/prime/{timestamp}/results_*.json`.
+
+**`data/`** (added 2026-08-17, built by `build_prime_cache.py`) holds the standalone primes+gaps
+cache for classical analysis: `primes_5000.json` (independently sieved, verified byte-identical to
+the gap sequence reconstructed from `results_5000primes.json`) and `primes_20000.json`. Every
+`layer2_*` / `layer3_*` / `smoothed_*` / `gap_derivative_*` script at the repo root reads gaps from
+one of these cache files now, rather than reconstructing them from a quantum-run JSON each time.
+`regime_fit_5k.py` is the one exception — it needs quantum-measured MI, not just gaps, so it still
+reads `results_5000primes.json` directly. `mi_landscape_25groups.py` also bypasses the cache by
+design: it regenerates only its own first 100 gaps inline (with an independent trial-division
+check baked in) for a real-quantum-circuit purpose unrelated to this cache.
+
+**Two changepoint sets exist for the gap sequence, at different scales and from different signals
+— don't conflate them.** The original 3 (windows 1529, 2501, 4211) come from `regime_fit_5k.py`
+running binary-segmentation changepoint detection on quantum-measured MI (5000-prime run, K=100
+rolling mean) and are what `hypotheses/regime_internal_wave_structure.md` means by "the known
+changepoints" through its Kurtosis Robustness Check and Changepoint Character Comparison sections.
+A second set of 39 comes from `layer3_20k_scaleup.py`, which runs the same least-squares
+mean-shift cost (vectorized, verified equivalent to the original's O(n²) loop) directly on the
+*raw gap sequence's* rolling mean at 20k-prime scale — no 20k-prime quantum run exists — with a
+data-driven permutation-null stopping rule instead of a fixed count of 3. Saved to
+`output/prime/20260818_015045/results.json` and reused (not re-detected) by
+`layer3_regime_characterization_20k.py` and the `layer3_regime_wave_gallery*.py` scripts. Check
+which changepoint set (and which timestamped run) a script points at before assuming it covers the
+latest data or the same detection method as another script.
 
 **`qubit_hierarchy_core.py`** is a data-agnostic statistical core (per-qubit marginals, pairwise MI
 correlation matrix, hierarchical bisection with Miller-Madow bias correction) shared between this
