@@ -116,3 +116,30 @@ distribution should be computed and reported *before* a result is called a confi
 function, `reconstruct` in `initial_program.py` — the frequency-truncation/inverse-DFT step shared
 by both the classical and quantum spectral prediction pathways above. It costs real LLM API calls
 per generation; don't run it without the user asking.
+
+## Next Session: Log-Detrended Residual Analysis
+
+**Context:** Tonight's session (2026-08-18) confirmed via the 40-regime characterization that mean
+gap and variance both show real, significant log-scale trends across the full 20k sequence
+(r=0.85, r=0.88, both p<0.0001), consistent with PNT's ln(N) growth. Every other tested property —
+skew, kurtosis, cross-regime self-similarity, boundary-kurtosis ordering — came back statistically
+null (n=39-40, permutation-tested). The full-sequence overview plot (`layer3_full_sequence_overview.py`
+output) visually confirms the rolling std climbs on a log-like curve and never fully flattens,
+oscillating in large humps out to prime 20,000 with no sign of settling into a steady state.
+
+**Open hypothesis for next session:** All prior wave/shape analysis (regime characterization,
+cross-regime overlay, kurtosis scans) was run on raw or per-regime-normalized data, which means any
+real wave/periodic structure could be getting masked or contaminated by the confirmed log growth
+trend itself — this is the same issue previously identified as the regime-0 FFT trend-artifact
+problem, just now suspected to matter at full-sequence scale too.
+
+**Next step:** Fit a log function (`std(N) ≈ a·ln(N) + b`, and separately `mean(N) ≈ a·ln(N) + b`)
+to the full 20,000-point rolling mean and rolling std, subtract to produce a detrended residual
+series, then rerun the existing spectral/kurtosis/self-similarity tools (FFT, autocorrelation,
+kurtosis scan) on the residual instead of raw or per-regime data. Rationale: if real periodic or
+self-similar wave structure exists, it should be more visible once log growth is no longer
+dominating the signal. If the residual also comes back flat, that's a cleaner, more decisive null
+than anything found tonight, since it removes the PNT confound entirely rather than working around
+it per-regime.
+
+**Do not start this work now** — record only, as the next session's starting point.
