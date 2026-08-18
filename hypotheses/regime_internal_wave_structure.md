@@ -302,3 +302,20 @@ Qualitative companion to the 40-Regime Characterization above — 10 of the 40 r
 ## Full-Sequence Overview
 
 **Date:** August 17, 2026 (system clock reports August 18, 2026 UTC for the run timestamp/commit below — same session). Single full-context visual, no new statistics or claims: the entire ~20,000-point raw gap sequence with rolling-std (K=100) overlaid and both changepoint sets marked (39 gap-space, 3 MI-space) for visual comparison of where each set actually falls — see `layer3_full_sequence_overview.py` and `output/prime/20260818_022222/layer3_full_sequence_overview.png`.
+
+## Log-Polar Changepoint Remap (findings note, not a hypothesis test)
+
+**Date:** August 18, 2026
+
+**Framing:** a coordinate-system probe, not a retest of the refuted Regime Overlay finding above or the null 20k Scale-Up / 40-Regime correlation results. All prior work in this file plots gap structure in flat index-vs-gap space; this checks whether the confirmed 39 changepoints (`output/prime/20260818_015045/results.json`) look any different when the full 19,999-gap sequence is remapped to log-polar coordinates instead — radius = log(n) (n = 1-based sequence position), angle = 2π·(gap_n / local_max_gap_in_window), K=201 centered window, so gap magnitude becomes phase rather than a second Cartesian axis. See `exploration/log_polar_changepoint_remap.py` and `output/prime/20260818_074756/log_polar_changepoint_remap.png`.
+
+**Visual read:** most of the 39 changepoints spread across nearly the full 0–360° angular range with no single dominant phase band, and track outward in radius roughly in step with their sequence position — expected, since radius=log(n) is monotonic in position, not evidence of new structure. One partial exception stands out: a subset of ~6 changepoints cluster visibly tighter than the rest, together around 35–50° at large radius (late-sequence positions) — denser there than anywhere else on the plot, though it's a subset, not the whole set of 39.
+
+**Quantitative nearest-neighbor check:** mean nearest-neighbor distance among the 39 changepoints, with each coordinate space's axes independently z-scored (position/gap wildly different natural units than log-polar radius/Cartesian angle, so raw distances aren't comparable — this normalizes each space to its own spread): flat (position, gap) = 0.3701; log-polar Cartesian (radius·cosθ, radius·sinθ) = 0.1886. **Log-polar remapping decreases average changepoint separation by 49.0%** — the 39 changepoints sit closer together as a group in log-polar space than in flat space.
+
+**Read together:** the quantitative tightening is consistent with, and likely driven largely by, the one visually dense 35–50° cluster rather than a uniform effect across all 39 points — most of the remaining changepoints look about as spread out in angle in log-polar space as they were in flat space. This is a descriptive coordinate-system observation, not confirming or reopening internal-wave/self-affinity; it doesn't change the status of the refuted Regime Overlay result or the null correlation findings above.
+
+**Caveats:**
+1. `local_max_gap_in_window` uses one arbitrary centered window size (K=201) — a different window changes every angle value and could strengthen, weaken, or relocate the observed 35–50° cluster; not swept here.
+2. Z-scoring each space's axes independently is one reasonable way to make flat and log-polar distances comparable at all, not the only possible normalization (e.g. min-max scaling would give a different number, possibly a different direction of effect).
+3. No null distribution was computed for either nearest-neighbor figure (e.g. "how much would 39 randomly chosen gap-indices' separation differ between flat and log-polar space by chance") — the 49% figure is descriptive, not tested against a random-changepoint baseline.
