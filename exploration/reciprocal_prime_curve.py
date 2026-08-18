@@ -13,6 +13,10 @@ prime *positions* -- p_n_actual - n*ln(n)/a -- and normalizes that
 position residual by n*ln(n) to check whether the log-scale fit fully
 explains prime position or leaves real structure behind.
 
+A fourth figure compares actual gaps p_{n+1}-p_n against the derivative
+of n*ln(n), plots the gap prediction error, and checks that error's
+autocorrelation out to lag 100 for leftover memory/structure.
+
 Reads data/primes_20000.json (the existing 20k-prime cache built by
 build_prime_cache.py) -- does not regenerate primes.
 
@@ -35,6 +39,7 @@ OUT_DIR = Path("output/prime") / datetime.now().strftime("%Y%m%d_%H%M%S")
 OUT_PATH = OUT_DIR / "reciprocal_prime_analysis.png"
 VARIANCE_OUT_PATH = OUT_DIR / "reciprocal_prime_variance.png"
 RESIDUALS_OUT_PATH = OUT_DIR / "reciprocal_prime_residuals.png"
+GAP_PREDICTION_OUT_PATH = OUT_DIR / "reciprocal_prime_gap_prediction.png"
 
 
 def load_primes() -> np.ndarray:
@@ -49,6 +54,15 @@ def rolling_variance(x: np.ndarray, window: int) -> np.ndarray:
 
 def reciprocal_model(n: np.ndarray, a: float) -> np.ndarray:
     return a / (n * np.log(n))
+
+
+def autocorrelation(x: np.ndarray, max_lag: int) -> np.ndarray:
+    """Sample ACF via Pearson correlation at each lag; acf[0] == 1.0."""
+    acf = np.empty(max_lag + 1)
+    acf[0] = 1.0
+    for lag in range(1, max_lag + 1):
+        acf[lag] = np.corrcoef(x[:-lag], x[lag:])[0, 1]
+    return acf
 
 
 def main() -> None:
@@ -163,6 +177,48 @@ def main() -> None:
 
     fig3.savefig(RESIDUALS_OUT_PATH, dpi=150)
     print(f"Saved plot to {RESIDUALS_OUT_PATH}")
+
+    n_gap = np.arange(1, len(primes))
+    predicted_gap = (n_gap + 1) * np.log(n_gap + 1) - n_gap * np.log(n_gap)
+    actual_gap = primes[1:] - primes[:-1]
+    gap_error = actual_gap - predicted_gap
+
+    max_lag = 100
+    acf = autocorrelation(gap_error, max_lag)
+
+    fig4, (ax_gap, ax_err, ax_acf) = plt.subplots(1, 3, figsize=(20, 6))
+
+    ax_gap.plot(n_gap, actual_gap, lw=0.8, color="#4c72b0", alpha=0.3, label="actual gap")
+    ax_gap.plot(
+        n_gap,
+        predicted_gap,
+        lw=1.2,
+        color="#c44e52",
+        label=r"predicted: $(n+1)\ln(n+1) - n\ln n$",
+    )
+    ax_gap.set_xlabel("n")
+    ax_gap.set_ylabel("gap")
+    ax_gap.set_title("Predicted vs actual gap")
+    ax_gap.legend()
+
+    ax_err.plot(n_gap, gap_error, lw=0.5, color="#2a9d5c")
+    ax_err.axhline(0, color="black", lw=0.6, ls="--")
+    ax_err.set_xlabel("n")
+    ax_err.set_ylabel(r"$g_n^{actual} - g_n^{predicted}$")
+    ax_err.set_title("Gap prediction error")
+
+    lags = np.arange(max_lag + 1)
+    ax_acf.bar(lags, acf, color="#e08214", width=0.8)
+    ax_acf.axhline(0, color="black", lw=0.6)
+    ax_acf.set_xlabel("lag")
+    ax_acf.set_ylabel("autocorrelation")
+    ax_acf.set_title("Autocorrelation of gap prediction error")
+
+    fig4.suptitle(f"Gap prediction over first {len(primes):,} primes")
+    fig4.tight_layout()
+
+    fig4.savefig(GAP_PREDICTION_OUT_PATH, dpi=150)
+    print(f"Saved plot to {GAP_PREDICTION_OUT_PATH}")
 
 
 if __name__ == "__main__":
