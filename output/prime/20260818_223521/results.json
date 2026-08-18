@@ -1,0 +1,101 @@
+{
+  "timestamp": "20260818_223521",
+  "source": "data/primes_5000.json",
+  "n_primes_used": 4997,
+  "train_n": 4797,
+  "test_n": 200,
+  "transition_counts": [
+    [
+      167,
+      432,
+      424,
+      169
+    ],
+    [
+      314,
+      148,
+      350,
+      385
+    ],
+    [
+      249,
+      359,
+      142,
+      465
+    ],
+    [
+      462,
+      258,
+      299,
+      173
+    ]
+  ],
+  "transition_probs": [
+    [
+      0.140101,
+      0.362416,
+      0.355705,
+      0.141779
+    ],
+    [
+      0.262322,
+      0.123642,
+      0.292398,
+      0.321637
+    ],
+    [
+      0.204938,
+      0.295473,
+      0.116872,
+      0.382716
+    ],
+    [
+      0.387584,
+      0.216443,
+      0.250839,
+      0.145134
+    ]
+  ],
+  "accuracy": 0.355,
+  "uniform_baseline": 0.25,
+  "majority_baseline": 0.215,
+  "majority_residue": 3,
+  "confusion_matrix": [
+    [
+      20,
+      7,
+      0,
+      24
+    ],
+    [
+      13,
+      19,
+      0,
+      21
+    ],
+    [
+      11,
+      12,
+      0,
+      20
+    ],
+    [
+      9,
+      12,
+      0,
+      32
+    ]
+  ],
+  "permutation_null": {
+    "n_perm": 5000,
+    "seed": 42,
+    "mean": 0.261996,
+    "std": 0.028701,
+    "observed_percentile": 99.92
+  },
+  "high_prob_pairs": [],
+  "verdict": {
+    "clears_fixed_threshold": true,
+    "clears_permutation_null_bar": true
+  }
+}
