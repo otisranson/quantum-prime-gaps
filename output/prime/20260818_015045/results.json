@@ -1,0 +1,376 @@
+{
+  "timestamp": "20260818_015045",
+  "gaps_source": "data/primes_20000.json",
+  "config": {
+    "rolling_k": 100,
+    "min_size": 400,
+    "n_perm_stop": 200,
+    "stop_percentile": 99.0,
+    "max_splits": 100,
+    "seed": 42,
+    "fine_width": 150,
+    "fine_step": 25,
+    "half_window": 300,
+    "n_perm_corr": 5000
+  },
+  "n_changepoints": 39,
+  "changepoints": [
+    {
+      "position": 499,
+      "binary_seg_gain": 544.071251,
+      "null_threshold": 6.061319,
+      "peak_kurtosis": 3.300542,
+      "peak_offset": -225.0,
+      "local_kurtosis_min": 0.590972,
+      "local_kurtosis_max": 3.300542
+    },
+    {
+      "position": 1271,
+      "binary_seg_gain": 2935.633895,
+      "null_threshold": 13.351291,
+      "peak_kurtosis": 3.38604,
+      "peak_offset": -150.0,
+      "local_kurtosis_min": 0.630185,
+      "local_kurtosis_max": 3.38604
+    },
+    {
+      "position": 1890,
+      "binary_seg_gain": 64.432276,
+      "null_threshold": 1.949423,
+      "peak_kurtosis": 6.800356,
+      "peak_offset": -125.0,
+      "local_kurtosis_min": 0.489875,
+      "local_kurtosis_max": 6.800356
+    },
+    {
+      "position": 2290,
+      "binary_seg_gain": 7.168999,
+      "null_threshold": 1.242429,
+      "peak_kurtosis": 7.530146,
+      "peak_offset": -25.0,
+      "local_kurtosis_min": 0.489875,
+      "local_kurtosis_max": 7.530146
+    },
+    {
+      "position": 2728,
+      "binary_seg_gain": 385.469319,
+      "null_threshold": 3.935146,
+      "peak_kurtosis": 7.74514,
+      "peak_offset": 150.0,
+      "local_kurtosis_min": 0.680708,
+      "local_kurtosis_max": 7.74514
+    },
+    {
+      "position": 3314,
+      "binary_seg_gain": 7.151002,
+      "null_threshold": 1.940524,
+      "peak_kurtosis": 14.697035,
+      "peak_offset": 25.0,
+      "local_kurtosis_min": 0.602703,
+      "local_kurtosis_max": 14.697035
+    },
+    {
+      "position": 3715,
+      "binary_seg_gain": 18.140167,
+      "null_threshold": 2.835414,
+      "peak_kurtosis": 10.641463,
+      "peak_offset": -75.0,
+      "local_kurtosis_min": 1.718446,
+      "local_kurtosis_max": 10.641463
+    },
+    {
+      "position": 4120,
+      "binary_seg_gain": 16.940444,
+      "null_threshold": 1.407654,
+      "peak_kurtosis": 7.738184,
+      "peak_offset": 125.0,
+      "local_kurtosis_min": 1.671467,
+      "local_kurtosis_max": 7.738184
+    },
+    {
+      "position": 4521,
+      "binary_seg_gain": 15085.485934,
+      "null_threshold": 19.712713,
+      "peak_kurtosis": 8.887234,
+      "peak_offset": -50.0,
+      "local_kurtosis_min": 1.427913,
+      "local_kurtosis_max": 8.887234
+    },
+    {
+      "position": 4921,
+      "binary_seg_gain": 15.898367,
+      "null_threshold": 1.642131,
+      "peak_kurtosis": 4.887804,
+      "peak_offset": 25.0,
+      "local_kurtosis_min": 0.819157,
+      "local_kurtosis_max": 4.887804
+    },
+    {
+      "position": 5683,
+      "binary_seg_gain": 37.232937,
+      "null_threshold": 1.979305,
+      "peak_kurtosis": 6.329448,
+      "peak_offset": 225.0,
+      "local_kurtosis_min": -0.271946,
+      "local_kurtosis_max": 6.329448
+    },
+    {
+      "position": 6084,
+      "binary_seg_gain": 254.698194,
+      "null_threshold": 3.808186,
+      "peak_kurtosis": 7.106981,
+      "peak_offset": -150.0,
+      "local_kurtosis_min": 0.929533,
+      "local_kurtosis_max": 7.106981
+    },
+    {
+      "position": 6545,
+      "binary_seg_gain": 5.653253,
+      "null_threshold": 3.030845,
+      "peak_kurtosis": 1.971837,
+      "peak_offset": 225.0,
+      "local_kurtosis_min": 0.46736,
+      "local_kurtosis_max": 1.971837
+    },
+    {
+      "position": 7004,
+      "binary_seg_gain": 33.145979,
+      "null_threshold": 3.128677,
+      "peak_kurtosis": 2.650662,
+      "peak_offset": 175.0,
+      "local_kurtosis_min": 0.081063,
+      "local_kurtosis_max": 2.650662
+    },
+    {
+      "position": 7472,
+      "binary_seg_gain": 10.466431,
+      "null_threshold": 2.341507,
+      "peak_kurtosis": 3.982059,
+      "peak_offset": -75.0,
+      "local_kurtosis_min": 0.298784,
+      "local_kurtosis_max": 3.982059
+    },
+    {
+      "position": 8118,
+      "binary_seg_gain": 43.883995,
+      "null_threshold": 3.842222,
+      "peak_kurtosis": 6.55665,
+      "peak_offset": -150.0,
+      "local_kurtosis_min": 0.931683,
+      "local_kurtosis_max": 6.55665
+    },
+    {
+      "position": 8666,
+      "binary_seg_gain": 54.204869,
+      "null_threshold": 5.530684,
+      "peak_kurtosis": 13.008524,
+      "peak_offset": 0.0,
+      "local_kurtosis_min": 0.899877,
+      "local_kurtosis_max": 13.008524
+    },
+    {
+      "position": 9282,
+      "binary_seg_gain": 57.733929,
+      "null_threshold": 3.955824,
+      "peak_kurtosis": 3.708496,
+      "peak_offset": -100.0,
+      "local_kurtosis_min": 0.070749,
+      "local_kurtosis_max": 3.708496
+    },
+    {
+      "position": 9865,
+      "binary_seg_gain": 2344.042311,
+      "null_threshold": 6.392722,
+      "peak_kurtosis": 7.188906,
+      "peak_offset": -100.0,
+      "local_kurtosis_min": 1.598875,
+      "local_kurtosis_max": 7.188906
+    },
+    {
+      "position": 10335,
+      "binary_seg_gain": 17.020051,
+      "null_threshold": 2.966397,
+      "peak_kurtosis": 7.451732,
+      "peak_offset": -100.0,
+      "local_kurtosis_min": 1.134509,
+      "local_kurtosis_max": 7.451732
+    },
+    {
+      "position": 10810,
+      "binary_seg_gain": 9.797928,
+      "null_threshold": 1.729341,
+      "peak_kurtosis": 3.992695,
+      "peak_offset": 200.0,
+      "local_kurtosis_min": 1.003918,
+      "local_kurtosis_max": 3.992695
+    },
+    {
+      "position": 11350,
+      "binary_seg_gain": 8.020978,
+      "null_threshold": 2.46809,
+      "peak_kurtosis": 4.919052,
+      "peak_offset": 75.0,
+      "local_kurtosis_min": 1.092107,
+      "local_kurtosis_max": 4.919052
+    },
+    {
+      "position": 11750,
+      "binary_seg_gain": 12.898208,
+      "null_threshold": 1.551228,
+      "peak_kurtosis": 6.009745,
+      "peak_offset": -125.0,
+      "local_kurtosis_min": 1.092107,
+      "local_kurtosis_max": 6.009745
+    },
+    {
+      "position": 12226,
+      "binary_seg_gain": 41.063078,
+      "null_threshold": 2.81801,
+      "peak_kurtosis": 3.674185,
+      "peak_offset": 150.0,
+      "local_kurtosis_min": 1.083125,
+      "local_kurtosis_max": 3.674185
+    },
+    {
+      "position": 12641,
+      "binary_seg_gain": 11.421064,
+      "null_threshold": 2.959498,
+      "peak_kurtosis": 8.038041,
+      "peak_offset": -25.0,
+      "local_kurtosis_min": 1.148766,
+      "local_kurtosis_max": 8.038041
+    },
+    {
+      "position": 13251,
+      "binary_seg_gain": 107.501613,
+      "null_threshold": 3.961737,
+      "peak_kurtosis": 3.480181,
+      "peak_offset": -50.0,
+      "local_kurtosis_min": 0.705222,
+      "local_kurtosis_max": 3.480181
+    },
+    {
+      "position": 13722,
+      "binary_seg_gain": 30.131828,
+      "null_threshold": 4.080538,
+      "peak_kurtosis": 6.811587,
+      "peak_offset": 75.0,
+      "local_kurtosis_min": -0.104793,
+      "local_kurtosis_max": 6.811587
+    },
+    {
+      "position": 14123,
+      "binary_seg_gain": 431.594335,
+      "null_threshold": 5.041903,
+      "peak_kurtosis": 15.866434,
+      "peak_offset": 175.0,
+      "local_kurtosis_min": 0.49215,
+      "local_kurtosis_max": 15.866434
+    },
+    {
+      "position": 14657,
+      "binary_seg_gain": 11.454452,
+      "null_threshold": 2.016951,
+      "peak_kurtosis": 5.954185,
+      "peak_offset": 225.0,
+      "local_kurtosis_min": 0.883215,
+      "local_kurtosis_max": 5.954185
+    },
+    {
+      "position": 15087,
+      "binary_seg_gain": 69.053881,
+      "null_threshold": 3.11064,
+      "peak_kurtosis": 6.031696,
+      "peak_offset": -200.0,
+      "local_kurtosis_min": 1.204474,
+      "local_kurtosis_max": 6.031696
+    },
+    {
+      "position": 15488,
+      "binary_seg_gain": 61.784564,
+      "null_threshold": 7.594863,
+      "peak_kurtosis": 6.727362,
+      "peak_offset": 225.0,
+      "local_kurtosis_min": -0.335682,
+      "local_kurtosis_max": 6.727362
+    },
+    {
+      "position": 16006,
+      "binary_seg_gain": 56.211138,
+      "null_threshold": 6.632611,
+      "peak_kurtosis": 9.36857,
+      "peak_offset": -25.0,
+      "local_kurtosis_min": 0.488639,
+      "local_kurtosis_max": 9.36857
+    },
+    {
+      "position": 16407,
+      "binary_seg_gain": 30.621874,
+      "null_threshold": 5.951155,
+      "peak_kurtosis": 5.138145,
+      "peak_offset": -150.0,
+      "local_kurtosis_min": 1.223263,
+      "local_kurtosis_max": 5.138145
+    },
+    {
+      "position": 16807,
+      "binary_seg_gain": 32.921094,
+      "null_threshold": 4.161313,
+      "peak_kurtosis": 12.628828,
+      "peak_offset": 200.0,
+      "local_kurtosis_min": 1.01245,
+      "local_kurtosis_max": 12.628828
+    },
+    {
+      "position": 17516,
+      "binary_seg_gain": 55.94824,
+      "null_threshold": 5.056434,
+      "peak_kurtosis": 3.973635,
+      "peak_offset": 125.0,
+      "local_kurtosis_min": 1.041801,
+      "local_kurtosis_max": 3.973635
+    },
+    {
+      "position": 18130,
+      "binary_seg_gain": 5.518041,
+      "null_threshold": 2.313967,
+      "peak_kurtosis": 8.246761,
+      "peak_offset": 75.0,
+      "local_kurtosis_min": 0.863548,
+      "local_kurtosis_max": 8.246761
+    },
+    {
+      "position": 18594,
+      "binary_seg_gain": 74.432487,
+      "null_threshold": 4.815119,
+      "peak_kurtosis": 4.005612,
+      "peak_offset": -225.0,
+      "local_kurtosis_min": -0.097625,
+      "local_kurtosis_max": 4.005612
+    },
+    {
+      "position": 18995,
+      "binary_seg_gain": 79.969865,
+      "null_threshold": 5.912743,
+      "peak_kurtosis": 10.539345,
+      "peak_offset": 100.0,
+      "local_kurtosis_min": 0.117887,
+      "local_kurtosis_max": 10.539345
+    },
+    {
+      "position": 19395,
+      "binary_seg_gain": 112.455196,
+      "null_threshold": 3.050305,
+      "peak_kurtosis": 9.849802,
+      "peak_offset": 125.0,
+      "local_kurtosis_min": -0.109668,
+      "local_kurtosis_max": 9.849802
+    }
+  ],
+  "position_vs_intensity_correlation": {
+    "observed_r": 0.11200369861567247,
+    "null_mean": -0.0002909652002912944,
+    "null_std": 0.16201564727009718,
+    "p_value_two_tailed": 0.4926
+  }
+}
