@@ -37,6 +37,30 @@ This is a research/exploration project. The prediction is correct, but prime gap
 
 ---
 
+## Recent Findings
+
+**Headline (confirmed): 39 structural changepoints in the 20,000-prime gap sequence, each with a
+genuine kurtosis peak.** A binary-segmentation changepoint detector (vectorized and independently
+verified against a naive reference implementation) found 39 points in the raw gap sequence where its
+local statistical character shifts, each carrying a real, non-degenerate local kurtosis peak (ranging
+1.97–15.87, mean 6.94) rather than a flat/uniform signal. That detection is solid and reproducible.
+Deeper questions about *why* — whether that kurtosis intensity trends with position along the
+sequence, or whether the 40 regimes these changepoints carve out resemble each other in shape — have
+both been tested with real statistical power and came back null. Full trail, including corrections
+made along the way, in `hypotheses/regime_internal_wave_structure.md`.
+
+**Exploratory, not yet confirmed (2026-08-18): those same 39 changepoints look tighter in a
+log-polar view of the data.** Instead of the usual flat index-vs-gap plot, remapping the sequence to
+log-polar coordinates (radius growing with log of position, angle set by gap size relative to its
+local neighborhood) makes the 39 changepoints cluster noticeably closer together — about 49% tighter
+by one distance measure. A follow-up ruled out the obvious explanation (that one visually dense
+cluster of 5 points was driving the whole effect — removing it barely moved the number), then tested
+the remaining points against random chance: the result looks real but currently lands around the
+16th percentile of a random-chance distribution, short of the usual bar for statistical significance.
+Worth another look, not yet a confirmed finding.
+
+---
+
 ## Contents
 
 - [`prime_predictor.py`](#prime-predictor) — recurrent 4-qubit prime gap predictor, simulator version

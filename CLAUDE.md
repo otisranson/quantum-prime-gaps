@@ -117,7 +117,51 @@ function, `reconstruct` in `initial_program.py` — the frequency-truncation/inv
 by both the classical and quantum spectral prediction pathways above. It costs real LLM API calls
 per generation; don't run it without the user asking.
 
+## Session Log: 2026-08-18 Morning — Reciprocal-Prime & Log-Polar Exploration
+
+A separate, later session on the same calendar date as the "Next Session" handoff below (see that
+section's own note on system-clock date labeling in this repo) — this was an exploratory detour
+into two new angles on the existing data, not a continuation of that handoff's planned work, which
+remains unstarted (see the updated note at the top of "Next Session" below).
+
+**`exploration/reciprocal_prime_curve.py`** — new exploration track looking at 1/p_n (prime
+reciprocals) instead of raw gaps, built up across four figures in one file: index vs. 1/p (linear +
+log y-axis), cumulative sum Σ1/p (log x-axis), and |Δ(1/p)| rate-of-change; rolling variance of that
+rate of change at K=100/K=500, normalized by the PNT-predicted envelope `(1/(n·ln n))²`; a scipy
+`curve_fit` of `a/(n·ln n)` to 1/p (converged **a=0.5271**), inverted to prime-position residuals —
+the normalized residual flattens to **≈ −0.76** rather than to zero, consistent with `n·ln n` missing
+the standard `ln(ln n)` Rosser correction term rather than evidence of hidden structure; and a
+gap-prediction figure comparing actual gaps to the derivative `(n+1)ln(n+1) − n·ln(n)`, whose
+prediction-error autocorrelation is flat past lag 0 out to lag 100 — no memory, consistent with every
+other null/no-structure result already on record in `hypotheses/`.
+
+**`exploration/log_polar_changepoint_remap.py`** — remaps the full 20k-gap sequence into log-polar
+coordinates (`radius=log(n)`, `angle=2π·gap/local_max_gap_in_window`, K=201) and overlays the 39
+confirmed changepoints (`output/prime/20260818_015045/results.json`). Found the 39 changepoints
+**49% tighter** (mean nearest-neighbor distance, z-scored axes) in log-polar space than in flat
+(position, gap) space. Follow-up `exploration/log_polar_cluster_test.py` isolated the visually
+densest sub-cluster (5 points, angle 30–50°/large radius) and removed it — the tightening persisted
+almost unchanged (49.0% → 49.6%), refuting the initial guess that the cluster alone explained it. A
+permutation test (1,000 draws of 34 random gap-indices) puts the remaining set at the **15.9th
+percentile** of a random null — suggestive but not below the conventional 5% significance threshold.
+Full detail and caveats in `hypotheses/regime_internal_wave_structure.md`'s two newest sections
+("Log-Polar Changepoint Remap" and "Log-Polar Cluster Exclusion Test").
+
+**New output directories this session** (all under `output/prime/`):
+- `20260818_063107/` — first `reciprocal_prime_curve.py` run, linear+log 1/p only (superseded by later runs in the same output file below)
+- `20260818_064228/` — `reciprocal_prime_analysis.png`, adds cumulative sum + rate-of-change panels
+- `20260818_070228/` — adds `reciprocal_prime_variance.png` (rolling variance + PNT-envelope-normalized residual)
+- `20260818_071458/` — adds `reciprocal_prime_residuals.png` (PNT curve fit + position residuals)
+- `20260818_072405/` — adds `reciprocal_prime_gap_prediction.png` (gap prediction + error autocorrelation)
+- `20260818_074756/` — `log_polar_changepoint_remap.png` (first log-polar remap + changepoint overlay)
+- `20260818_080542/` — `log_polar_cluster_exclusion_test.png` (cluster-exclusion + permutation test)
+
 ## Next Session: Log-Detrended Residual Analysis
+
+**Status update (2026-08-18 morning session, above): still outstanding, unstarted.** No script (e.g.
+a `layer3_log_detrend_residual.py`) implementing the plan below has been written yet — the morning
+session was an independent exploratory detour into 1/p and log-polar coordinate reframings, not a
+replacement for this objective. This remains the next session's primary objective.
 
 **Context:** Tonight's session (2026-08-18) confirmed via the 40-regime characterization that mean
 gap and variance both show real, significant log-scale trends across the full 20k sequence
