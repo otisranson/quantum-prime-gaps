@@ -187,3 +187,52 @@ than anything found tonight, since it removes the PNT confound entirely rather t
 it per-regime.
 
 **Do not start this work now** — record only, as the next session's starting point.
+
+## Session handoff — 2026-08-18/19
+
+**1. What was tested this session, and outcome for each:**
+
+- **Shannon entropy H(N) trend fit** (log-linear, R²=0.749, `experiments/gap_entropy_windows.py`,
+  `output/prime/20260818_224457/`) — **established, not novel on its own** (prior art: Ortiz-Tapia 2016).
+- **Entropy / gap-space changepoint overlap** (`experiments/entropy_mi_overlap.py`,
+  `output/prime/20260818_225919/`) — **11/39 contained, ~1.72x null baseline — real, modest enrichment.**
+- **Entropy / sim-MI changepoint overlap** (`experiments/entropy_mi_overlap_sim20k.py`,
+  `output/prime/20260818_234059/`) — **10/37 contained, ~1.65x null baseline — nearly identical to the
+  gap-space result; sim-based MI shows no additional signal over the classical proxy.**
+- **Global damped-oscillation hypothesis** (residual amplitude vs. N,
+  `experiments/entropy_velocity_residual_decay.py`, `output/prime/20260818_235347/`) —
+  **rejected in practice** (best decay model R²=0.0103, permutation p=0.006 — statistically real,
+  practically negligible).
+- **Value-anomaly vs. velocity-anomaly window overlap** (same script/run above) — **0 observed vs. 1.96
+  expected — not distinguishable from chance** (exact hypergeometric p=1.0).
+- **Regime-relative burst-decay ("sawtooth") hypothesis** (`experiments/regime_relative_entropy_velocity.py`,
+  `output/prime/20260819_001136/`) — **rejected against a length-matched permutation null** (70% of
+  regimes nominally show the pattern vs. 72.4% null mean, p=0.714); fitted k-values scattered
+  (CV=1.93), no shared underlying rate.
+
+**2. Known open threads, explicitly not yet done:**
+
+- True MI changepoints beyond N=4999 still require actual IBM hardware — this session's sim-based MI
+  terrain run (`experiments/terrain_20000primes_sim.py`, AerSimulator only) was a stand-in, not a
+  substitute; hardware-vs-sim divergence for MI itself is still untested.
+- Full hardware-only run for prime 239 (avoiding sim/hardware regime mismatch) — still pending, IBM
+  Pay-As-You-Go needed.
+- Three-circuit architecture (local / mid-range / global) — not started.
+- N-as-explicit-variable formalism — discussed conceptually, not yet built into any circuit or model.
+- mod5 residue transition N-decay test (1k/2k/5k/20k) — proposed, never run.
+
+**3. Standing methodological conventions reinforced this session:**
+
+- Always compute a permutation-null / base-rate before treating any overlap or fit-comparison as a
+  finding.
+- Distinguish statistical significance from practical effect size explicitly (R² alongside p-value).
+- Don't conflate differently-sourced changepoint sets (quantum MI vs. classical gap-space) even when
+  using the same detection algorithm — name outputs accordingly.
+- Document negative/null results with the same rigor as positive ones.
+
+**Plain-language summary of where the regime-structure research program stands:** entropy and
+classical gap-space regime detectors show modest, real convergence with each other; simulated quantum
+MI does not yet show anything beyond what the classical proxy already captures; velocity/derivative-
+based refinements (both global and regime-local) were tested this session and did not reveal
+additional structure. The open question of whether real IBM hardware MI shows non-classical structure
+remains untested.
