@@ -1,0 +1,62 @@
+{
+  "timestamp": "20260823_125001",
+  "gaps_source": "data/primes_20000.json",
+  "rolling_window": 100,
+  "flag_threshold_pct": 1.0,
+  "free_fit": {
+    "std": {
+      "a": 1.102613,
+      "b": -1.150268,
+      "r_squared": 0.566478
+    },
+    "variance": {
+      "a": 17.588932,
+      "b": -79.520506,
+      "r_squared": 0.490096
+    }
+  },
+  "candidates": [
+    {
+      "name": "1/(2*pi)",
+      "value": 0.159155,
+      "target": "std",
+      "empirical_slope": 1.102613,
+      "pct_error": 85.5657,
+      "flagged": false
+    },
+    {
+      "name": "1/pi",
+      "value": 0.31831,
+      "target": "std",
+      "empirical_slope": 1.102613,
+      "pct_error": 71.1313,
+      "flagged": false
+    },
+    {
+      "name": "pi^2/6",
+      "value": 1.644934,
+      "target": "variance",
+      "empirical_slope": 17.588932,
+      "pct_error": 90.6479,
+      "flagged": false
+    },
+    {
+      "name": "1/(2*e)",
+      "value": 0.18394,
+      "target": "std",
+      "empirical_slope": 1.102613,
+      "pct_error": 83.3178,
+      "flagged": false
+    },
+    {
+      "name": "ln(2)/pi",
+      "value": 0.220636,
+      "target": "std",
+      "empirical_slope": 1.102613,
+      "pct_error": 79.9897,
+      "flagged": false
+    }
+  ],
+  "n_flagged": 0,
+  "note": "std(N) fit here is unrelated to the H(N) Shannon-entropy fit in experiments/gap_entropy_windows.py -- naming collision only, different quantities."
+}
