@@ -122,7 +122,8 @@ per generation; don't run it without the user asking.
 A separate, later session on the same calendar date as the "Next Session" handoff below (see that
 section's own note on system-clock date labeling in this repo) — this was an exploratory detour
 into two new angles on the existing data, not a continuation of that handoff's planned work, which
-remains unstarted (see the updated note at the top of "Next Session" below).
+was completed in the 2026-08-23 session (see "Session Log: 2026-08-23" below) — the note below is
+left as-is for the historical record of how long it stayed queued.
 
 **`exploration/reciprocal_prime_curve.py`** — new exploration track looking at 1/p_n (prime
 reciprocals) instead of raw gaps, built up across four figures in one file: index vs. 1/p (linear +
@@ -156,12 +157,14 @@ Full detail and caveats in `hypotheses/regime_internal_wave_structure.md`'s two 
 - `20260818_074756/` — `log_polar_changepoint_remap.png` (first log-polar remap + changepoint overlay)
 - `20260818_080542/` — `log_polar_cluster_exclusion_test.png` (cluster-exclusion + permutation test)
 
-## Next Session: Log-Detrended Residual Analysis
+## Next Session: Log-Detrended Residual Analysis (COMPLETED 2026-08-23)
 
-**Status update (2026-08-18 morning session, above): still outstanding, unstarted.** No script (e.g.
-a `layer3_log_detrend_residual.py`) implementing the plan below has been written yet — the morning
-session was an independent exploratory detour into 1/p and log-polar coordinate reframings, not a
-replacement for this objective. This remains the next session's primary objective.
+**Status update (2026-08-23 session): done.** `layer3_log_detrend_residual.py` implements the plan
+below exactly — see "Session Log: 2026-08-23" further down for the result (clean null, nothing
+survives detrending) and a methodological catch (a naive full-shuffle permutation null had to be
+replaced with a block-shuffle null; see that section and
+`hypotheses/regime_internal_wave_structure.md`'s "Five-Stage Session" entry for why). This section
+is left below unmodified as the historical record of the original plan/rationale.
 
 **Context:** Tonight's session (2026-08-18) confirmed via the 40-regime characterization that mean
 gap and variance both show real, significant log-scale trends across the full 20k sequence
@@ -186,7 +189,8 @@ dominating the signal. If the residual also comes back flat, that's a cleaner, m
 than anything found tonight, since it removes the PNT confound entirely rather than working around
 it per-regime.
 
-**Do not start this work now** — record only, as the next session's starting point.
+~~**Do not start this work now** — record only, as the next session's starting point.~~ (superseded
+— this work is done, see above.)
 
 ## Session handoff — 2026-08-18/19
 
@@ -236,3 +240,39 @@ MI does not yet show anything beyond what the classical proxy already captures; 
 based refinements (both global and regime-local) were tested this session and did not reveal
 additional structure. The open question of whether real IBM hardware MI shows non-classical structure
 remains untested.
+
+## Session Log: 2026-08-23 — Five-Stage Session (pi Coefficient, Log-Detrend Residual, Phase, Hilbert, Regime-0 Fit)
+
+Five independent checks against the full 20k gap sequence, run in one session and each auto-committed/
+pushed on completion. Full detail, tables, and caveats in
+`hypotheses/regime_internal_wave_structure.md`'s "Five-Stage Session" entry — this is the short
+version for anyone scanning CLAUDE.md first.
+
+**Results, all five:**
+1. **pi/e coefficient test** (`layer3_pi_coefficient_test.py`) — **refuted.** None of 5 candidate
+   constants (1/2pi, 1/pi, pi^2/6, 1/2e, ln(2)/pi) come within 70% of the empirical log-fit slopes for
+   rolling std or variance. Ordinary PNT-driven growth, not a hidden constant.
+2. **Log-Detrend Residual Analysis** (`layer3_log_detrend_residual.py`) — completes the objective
+   queued above on 2026-08-18. **Clean null**: no structure survives once the log trend is subtracted
+   from either the rolling mean or rolling std. Required fixing a naive full-shuffle permutation null
+   (no discriminating power against the trivial autocorrelation an overlapping rolling window produces
+   by construction) with a block-shuffle null instead — recorded so this pitfall isn't rediscovered.
+3. **Phase Analysis at 39 Changepoints** (`layer3_phase_changepoint_analysis.py`) — **no significant
+   phase discontinuity** at either frequency the method can actually resolve (periods 2.29 and 7.56
+   gap-steps; p=0.056 and p=0.590). Four longer-period components (periods 6666–20000) are flagged
+   NOT RESOLVABLE by the STFT window used (width=500 can't contain even one cycle) — genuinely
+   untested, not a null result for those frequencies.
+4. **Hilbert Transform / Analytic Signal** (`layer3_hilbert_analytic_signal.py`) — no significant
+   phase discontinuity at changepoints (p=0.629); envelope-vs-log-trend correlation is weak (r=0.168),
+   contrary to the pre-stated expectation of a strong correlation — reported as a genuine surprise.
+5. **Regime-0 Functional Form Fit** (`layer3_regime0_functional_fit.py`) — **log wins by AIC/BIC**
+   under both existing regime-0 boundary definitions (`[0,499)` from the 39-changepoint carving,
+   `[0,1529)` from the original 3-changepoint carving); boundary choice doesn't change the winner.
+
+**Net read:** the log-growth trend remains the only real, non-negligible structure in the full 20k
+sequence. Nothing in this session reopens the refuted cross-regime self-similarity finding or any
+other null result already on record. The one number worth a second look before calling this fully
+closed: the period-2.29 phase-jump test's p=0.056 is the closest-to-significant result across all
+five stages, though it wasn't corrected for the 6 comparisons run in that same stage and should be
+checked for robustness across STFT window sizes before it's treated as anything more than noise — not
+attempted this session.
