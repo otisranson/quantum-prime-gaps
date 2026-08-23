@@ -1,0 +1,38 @@
+{
+  "timestamp": "20260823_130412",
+  "gaps_source": "data/primes_20000.json",
+  "changepoints_source": "output/prime/20260818_015045/results.json",
+  "config": {
+    "rolling_window": 100,
+    "n_perm": 5000,
+    "seed": 42
+  },
+  "n_changepoints": 39,
+  "envelope_range": [
+    2.000000011201915,
+    86.25032083179116
+  ],
+  "changepoint_phase_jump_test": {
+    "observed_mean_jump_at_changepoints": 0.8627477548974622,
+    "null_mean": 0.893028394876948,
+    "null_std": 0.09166118692083344,
+    "p_value": 0.6294
+  },
+  "log_fits": {
+    "mean": {
+      "a": 1.104746,
+      "b": 1.400208,
+      "r_squared": 0.77767
+    },
+    "std": {
+      "a": 1.102613,
+      "b": -1.150268,
+      "r_squared": 0.566478
+    }
+  },
+  "envelope_vs_trend_correlation": {
+    "vs_mean_fit": 0.1676867687961577,
+    "vs_std_fit": 0.16768676879615768
+  },
+  "confound_note": "Hilbert transform applied to the raw, strictly-positive, trend-dominated gap sequence (not zero-mean/narrowband) as literally instructed. Pre-registered expectation (before running) was that the envelope would track local signal magnitude closely -- vs_mean_fit and vs_std_fit are mathematically identical (both curves are positive-slope affine transforms of the same ln(N+2), and Pearson r is invariant to that), so this is one comparison, not two. The actual result (r~0.17) is WEAK, contrary to the pre-stated expectation of high correlation -- reported as a genuine surprise, not evidence of hidden structure (a weak correlation is still consistent with 'no interesting structure', just not in the direction originally guessed)."
+}
