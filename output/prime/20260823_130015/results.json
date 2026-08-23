@@ -1,0 +1,78 @@
+{
+  "timestamp": "20260823_130015",
+  "gaps_source": "data/primes_20000.json",
+  "config": {
+    "rolling_window": 100,
+    "autocorr_max_lag": 200,
+    "kurt_width": 500,
+    "kurt_step": 100,
+    "n_perm": 2000,
+    "seed": 42
+  },
+  "log_fits": {
+    "mean": {
+      "a": 1.104746,
+      "b": 1.400208,
+      "r_squared": 0.77767
+    },
+    "std": {
+      "a": 1.102613,
+      "b": -1.150268,
+      "r_squared": 0.566478
+    }
+  },
+  "residual_analysis": {
+    "mean": {
+      "top_fft_peak": {
+        "frequency": 0.003869346733668342,
+        "period": 258.4415584415584,
+        "magnitude": 1445.985072848039
+      },
+      "fft_permutation_test": {
+        "null_mean": 1355.0232773098442,
+        "null_std": 149.42838569390403,
+        "p_value": 0.237
+      },
+      "autocorr_permutation_test": {
+        "observed_max_abs_lag1plus": 0.9754404174727297,
+        "null_mean": 0.9709370792224463,
+        "null_std": 0.0004639843996269217,
+        "p_value": 0.0,
+        "z_score": 9.705796690372338,
+        "relative_effect_pct": 0.46381360302871255
+      },
+      "confidence": "none -- FFT peak not significant; autocorrelation is statistically significant (p<0.05) but the effect size is negligible (<2.0% relative to null mean), consistent with the block-shuffle null's very low variance rather than real structure",
+      "kurtosis_scan_range": [
+        -1.4343397673528286,
+        1.6694449008302144
+      ],
+      "kurtosis_scan_mean": -0.5544421130601638
+    },
+    "std": {
+      "top_fft_peak": {
+        "frequency": 0.0033668341708542712,
+        "period": 297.01492537313436,
+        "magnitude": 2590.517880909932
+      },
+      "fft_permutation_test": {
+        "null_mean": 2336.0646584790074,
+        "null_std": 254.06232969505453,
+        "p_value": 0.1555
+      },
+      "autocorr_permutation_test": {
+        "observed_max_abs_lag1plus": 0.9864125010403193,
+        "null_mean": 0.9824541383859621,
+        "null_std": 0.0004061142027142671,
+        "p_value": 0.0,
+        "z_score": 9.74692002373097,
+        "relative_effect_pct": 0.40290559118212654
+      },
+      "confidence": "none -- FFT peak not significant; autocorrelation is statistically significant (p<0.05) but the effect size is negligible (<2.0% relative to null mean), consistent with the block-shuffle null's very low variance rather than real structure",
+      "kurtosis_scan_range": [
+        -1.5058074763108606,
+        2.127346930647052
+      ],
+      "kurtosis_scan_mean": -0.49774528816584374
+    }
+  }
+}
