@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Prime Plot</title>
 <style>
-  :root{--bg:#0b0e14;--fg:#d6deeb;--dim:#7d8aa3;--accent:#7fdbca;--panel:#131826}
-  @media (prefers-color-scheme: light){:root{--bg:#f7f8fa;--fg:#1c2330;--dim:#5b6780;--accent:#0b7a6b;--panel:#e9ecf2}}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:14px system-ui,sans-serif}
+  :root{--bg:#0b0e14;--fg:#d6deeb;--dim:#7d8aa3;--accent:#7fdbca;--panel:#131826;--grid:#1d2433}
+  @media (prefers-color-scheme: light){:root{--bg:#f7f8fa;--fg:#1c2330;--dim:#5b6780;--accent:#0b7a6b;--panel:#e9ecf2;--grid:#e3e7ee}}
+  html,body{margin:0;height:100%;display:flex;flex-direction:column;background:var(--bg);color:var(--fg);font:14px system-ui,sans-serif}
   #bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:8px 16px;background:var(--panel)}
   #bar label{display:flex;align-items:center;gap:6px}
   select,input{font:inherit}
   #info{color:var(--dim);margin-left:auto}
-  canvas{display:block;width:100%;height:calc(100% - 90px);touch-action:none;cursor:grab}
+  canvas{display:block;width:100%;flex:1;min-height:0;touch-action:none;cursor:grab}
   #tip{padding:4px 16px;color:var(--dim);height:20px}
 </style>
 </head>
@@ -20,11 +20,18 @@
 <div id="bar">
   <label>Layout
     <select id="mode">
+      <option value="gap">Gaps — (pₙ, pₙ₊₁ − pₙ)</option>
       <option value="ulam">Ulam spiral — each prime at its (x, y) grid cell</option>
       <option value="seq">Sequence — (n, pₙ)</option>
-      <option value="gap">Gaps — (pₙ, pₙ₊₁ − pₙ)</option>
     </select>
   </label>
+  <label>Render
+    <select id="render">
+      <option value="density">Density (log-scaled count)</option>
+      <option value="points">Points</option>
+    </select>
+  </label>
+  <label id="logl"><input id="logx" type="checkbox"> log x</label>
   <label>Max N <input id="n" type="range" min="1000" max="2000000" step="1000" value="200000">
     <span id="nv"></span></label>
   <span id="info"></span>
@@ -35,38 +42,50 @@
 "use strict";
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 const $ = id => document.getElementById(id);
-let primes = [], pts = [], view = {x:0, y:0, s:1}, dpr = 1;
+const HINT = 'Drag to pan, wheel/pinch to zoom, double-click to reset. Hover a point for its coordinates.';
+const LABELS = {
+  ulam:['x (spiral column)','y (spiral row)'],
+  seq:['n (index of prime)','pₙ (the prime)'],
+  gap:['pₙ (the prime)','gap  pₙ₊₁ − pₙ'],
+};
+let primes = [], pts = new Float64Array(0), dpr = 1;
+const view = {x:0, y:0, sx:1, sy:1};               // data -> plot-area pixels
+const M = {l:64, r:16, t:10, b:44};                // margins (css px)
 
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
 function sieve(n){
-  const f = new Uint8Array(n+1); const out = [];
-  for (let i=2;i<=n;i++){
-    if (!f[i]){ out.push(i); for (let j=i*i;j<=n;j+=i) f[j]=1; }
-  }
+  const f = new Uint8Array(n+1), out = [];
+  for (let i=2;i<=n;i++) if (!f[i]){ out.push(i); for (let j=i*i;j<=n;j+=i) f[j]=1; }
   return out;
 }
-
 // Ulam spiral: 1 at (0,0), 2 to its right, then counter-clockwise (y up).
 function ulam(n){
   if (n===1) return [0,0];
   const k = Math.ceil((Math.sqrt(n)-1)/2), side = 2*k, base = (2*k-1)**2;
   const d = n-base-1, q = Math.floor(d/side), r = d%side;
   switch(q){
-    case 0: return [k, -k+1+r];       // right edge, going up
-    case 1: return [k-1-r, k];        // top edge, going left
-    case 2: return [-k, k-1-r];       // left edge, going down
-    default: return [-k+1+r, -k];     // bottom edge, going right
+    case 0: return [k, -k+1+r];
+    case 1: return [k-1-r, k];
+    case 2: return [-k, k-1-r];
+    default: return [-k+1+r, -k];
   }
 }
+
+const isLog = () => $('logx').checked && $('mode').value!=='ulam';
+const tx = x => isLog() ? Math.log10(x) : x;       // x transform (log option)
+const X = x => M.l*dpr + view.x + tx(x)*view.sx;
+const Y = y => (cv.height - M.b*dpr) - (view.y + y*view.sy);
+const plot = () => ({x0:M.l*dpr, x1:cv.width-M.r*dpr, y0:M.t*dpr, y1:cv.height-M.b*dpr});
 
 function build(){
   const N = +$('n').value, mode = $('mode').value;
   $('nv').textContent = N.toLocaleString();
+  $('logl').style.opacity = mode==='ulam' ? .35 : 1;
   primes = sieve(N);
   pts = new Float64Array(primes.length*2);
-  const labels = [];
   for (let i=0;i<primes.length;i++){
     const p = primes[i]; let x,y;
-    if (mode==='ulam'){ [x,y] = ulam(p); }
+    if (mode==='ulam') [x,y] = ulam(p);
     else if (mode==='seq'){ x = i+1; y = p; }
     else { x = p; y = (primes[i+1]||p) - p; }
     pts[2*i]=x; pts[2*i+1]=y;
@@ -75,32 +94,127 @@ function build(){
   fit(); draw();
 }
 
+// view maps tx(x)->px offset from the left margin, y->px up from the bottom margin
 function fit(){
   let x0=1e18,x1=-1e18,y0=1e18,y1=-1e18;
   for (let i=0;i<pts.length;i+=2){
-    x0=Math.min(x0,pts[i]);x1=Math.max(x1,pts[i]);
-    y0=Math.min(y0,pts[i+1]);y1=Math.max(y1,pts[i+1]);
+    const x=tx(pts[i]), y=pts[i+1];
+    if (x<x0)x0=x; if (x>x1)x1=x; if (y<y0)y0=y; if (y>y1)y1=y;
   }
-  const w=cv.width, h=cv.height, pad=20*dpr;
-  const sx=(w-2*pad)/Math.max(1,x1-x0), sy=(h-2*pad)/Math.max(1,y1-y0);
-  if ($('mode').value==='ulam'){ view.s=Math.min(sx,sy); view.sy=view.s; view.flip=true; }
-  else { view.s=sx; view.sy=sy; view.flip=true; }
-  view.x=w/2-view.s*(x0+x1)/2; view.y=h/2+view.sy*(y0+y1)/2;
+  if (isLog()) x0 = 0;                              // start at p=1
+  const P = plot(), w=P.x1-P.x0, h=P.y1-P.y0, pad=8*dpr;
+  let sx=(w-2*pad)/Math.max(1e-9,x1-x0), sy=(h-2*pad)/Math.max(1e-9,y1-y0);
+  if ($('mode').value==='ulam'){ sx = sy = Math.min(sx,sy); }
+  view.sx=sx; view.sy=sy;
+  view.x = (w-(x1-x0)*sx)/2 - x0*sx;
+  view.y = (h-(y1-y0)*sy)/2 - y0*sy;
 }
 
-const X = x => view.x + x*view.s;
-const Y = y => view.y - y*view.sy;
+function niceStep(range, target){
+  const raw = range/target, p = 10**Math.floor(Math.log10(raw)), f = raw/p;
+  return (f<1.5?1:f<3.5?2:f<7.5?5:10)*p;
+}
+function fmt(v){
+  const a=Math.abs(v);
+  if (a>=1e6) return +(v/1e6).toPrecision(3)+'M';
+  if (a>=1e4) return +(v/1e3).toPrecision(3)+'k';
+  return String(+v.toPrecision(6));
+}
+function xTicks(P){
+  const out=[];
+  const dLo = (P.x0-(M.l*dpr+view.x))/view.sx, dHi=(P.x1-(M.l*dpr+view.x))/view.sx;
+  if (isLog()){
+    for (let e=Math.floor(dLo); e<=Math.ceil(dHi); e++)
+      for (const m of [1,2,5]){ const v=m*10**e, t=Math.log10(v);
+        if (t>=dLo && t<=dHi) out.push([v, m===1]); }
+  } else {
+    const st=niceStep(dHi-dLo, P.x1-P.x0>600*dpr?9:5);
+    for (let v=Math.ceil(dLo/st)*st; v<=dHi; v+=st) out.push([v,true]);
+  }
+  return out;
+}
+function yTicks(P){
+  const dLo=(cv.height-M.b*dpr-P.y1-view.y)/view.sy, dHi=(cv.height-M.b*dpr-P.y0-view.y)/view.sy;
+  const st=niceStep(dHi-dLo, 7), out=[];
+  for (let v=Math.ceil(dLo/st)*st; v<=dHi; v+=st) out.push(v);
+  return out;
+}
 
-function draw(){
-  ctx.fillStyle = getComputedStyle(document.body).backgroundColor;
-  ctx.fillRect(0,0,cv.width,cv.height);
-  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent');
-  const sz = Math.max(1, Math.min(4*dpr, view.s*0.8)), w=cv.width, h=cv.height;
+// perceptual sequential ramp (viridis-like) as a 256-entry LUT
+const STOPS=[[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]];
+const LUT=(()=>{const l=[];for(let i=0;i<256;i++){const t=i/255*(STOPS.length-1),k=Math.min(STOPS.length-2,Math.floor(t)),f=t-k;
+  l.push(STOPS[k].map((c,j)=>Math.round(c+(STOPS[k+1][j]-c)*f)));}return l;})();
+
+function drawDensity(P){
+  const cell = Math.max(1, Math.round(3*dpr)), gw=Math.ceil((P.x1-P.x0)/cell), gh=Math.ceil((P.y1-P.y0)/cell);
+  const g = new Uint32Array(gw*gh); let mx=0;
   for (let i=0;i<pts.length;i+=2){
     const px=X(pts[i]), py=Y(pts[i+1]);
-    if (px<-5||py<-5||px>w+5||py>h+5) continue;
+    if (px<P.x0||px>=P.x1||py<P.y0||py>=P.y1) continue;
+    const c=Math.floor((px-P.x0)/cell)+Math.floor((py-P.y0)/cell)*gw;
+    if (++g[c]>mx) mx=g[c];
+  }
+  const lm = Math.log(1+mx), img = ctx.createImageData(gw*cell, gh*cell), W=gw*cell;
+  for (let gy=0;gy<gh;gy++) for (let gx=0;gx<gw;gx++){
+    const n=g[gx+gy*gw]; if(!n) continue;
+    const [r,gg,b]=LUT[Math.round(255*Math.log(1+n)/lm)];
+    for (let yy=0;yy<cell;yy++) for (let xx=0;xx<cell;xx++){
+      const o=((gy*cell+yy)*W+gx*cell+xx)*4; img.data[o]=r;img.data[o+1]=gg;img.data[o+2]=b;img.data[o+3]=255;
+    }
+  }
+  ctx.putImageData(img, P.x0, P.y0, 0, 0, P.x1-P.x0, P.y1-P.y0);
+  return mx;
+}
+function drawPoints(P){
+  ctx.fillStyle = css('--accent');
+  const sz = Math.max(1, Math.min(4*dpr, Math.min(view.sx,view.sy)*0.8));
+  for (let i=0;i<pts.length;i+=2){
+    const px=X(pts[i]), py=Y(pts[i+1]);
+    if (px<P.x0||px>P.x1||py<P.y0||py>P.y1) continue;
     ctx.fillRect(px-sz/2, py-sz/2, sz, sz);
   }
+}
+
+function draw(){
+  const P=plot(), mode=$('mode').value, dens=$('render').value==='density';
+  ctx.fillStyle = getComputedStyle(document.body).backgroundColor;
+  ctx.fillRect(0,0,cv.width,cv.height);
+  const xt=xTicks(P), yt=yTicks(P);
+  // gridlines under the data
+  ctx.lineWidth=1; ctx.strokeStyle=css('--grid');
+  ctx.beginPath();
+  for (const [v] of xt){ const x=Math.round(X(v))+.5; ctx.moveTo(x,P.y0); ctx.lineTo(x,P.y1); }
+  for (const v of yt){ const y=Math.round(Y(v))+.5; ctx.moveTo(P.x0,y); ctx.lineTo(P.x1,y); }
+  ctx.stroke();
+  let mx=0;
+  if (dens) mx=drawDensity(P); else drawPoints(P);
+  // axes
+  ctx.strokeStyle=css('--dim'); ctx.fillStyle=css('--dim'); ctx.font=`${12*dpr}px system-ui,sans-serif`;
+  ctx.beginPath(); ctx.moveTo(P.x0+.5,P.y0); ctx.lineTo(P.x0+.5,P.y1+.5); ctx.lineTo(P.x1,P.y1+.5); ctx.stroke();
+  ctx.beginPath(); ctx.textAlign='center'; ctx.textBaseline='top';
+  for (const [v,major] of xt){ const x=Math.round(X(v))+.5;
+    ctx.moveTo(x,P.y1); ctx.lineTo(x,P.y1+(major?6:3)*dpr);
+    if (major) ctx.fillText(fmt(v), x, P.y1+8*dpr); }
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  for (const v of yt){ const y=Math.round(Y(v))+.5; ctx.moveTo(P.x0,y); ctx.lineTo(P.x0-6*dpr,y); ctx.fillText(fmt(v), P.x0-9*dpr, y); }
+  ctx.stroke();
+  // axis titles
+  ctx.fillStyle=css('--fg'); ctx.textAlign='center'; ctx.textBaseline='bottom';
+  ctx.fillText(LABELS[mode][0]+(isLog()?'  (log scale)':''), (P.x0+P.x1)/2, cv.height-4*dpr);
+  ctx.save(); ctx.translate(14*dpr,(P.y0+P.y1)/2); ctx.rotate(-Math.PI/2); ctx.textBaseline='top';
+  ctx.fillText(LABELS[mode][1],0,-6*dpr); ctx.restore();
+  if (dens && mx) legend(P,mx);
+}
+function legend(P,mx){
+  const w=120*dpr,h=10*dpr,x=P.x1-w-10*dpr,y=P.y0+24*dpr;
+  const g=ctx.createLinearGradient(x,0,x+w,0);
+  STOPS.forEach((c,i)=>g.addColorStop(i/(STOPS.length-1),`rgb(${c})`));
+  ctx.fillStyle=g; ctx.fillRect(x,y,w,h);
+  ctx.strokeStyle=css('--dim'); ctx.strokeRect(x+.5,y+.5,w,h);
+  ctx.fillStyle=css('--fg'); ctx.font=`${11*dpr}px system-ui,sans-serif`; ctx.textBaseline='bottom'; ctx.textAlign='left';
+  ctx.textBaseline='top'; ctx.textAlign='left'; ctx.fillText('1',x,y+h+3*dpr);
+  ctx.textAlign='right'; ctx.fillText(mx.toLocaleString(),x+w,y+h+3*dpr);
+  ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillText('primes per cell (log colour)',x+w/2,y-3*dpr);
 }
 
 function resize(){
@@ -112,8 +226,10 @@ function resize(){
 // pan / zoom
 const ptrs = new Map(); let lastDist = 0;
 function zoomAt(cx, cy, f){
-  view.x = cx-(cx-view.x)*f; view.y = cy-(cy-view.y)*f;
-  view.s*=f; view.sy*=f; draw();
+  // zoom about screen point (cx,cy); in log mode x zoom is still in log units
+  const ox=M.l*dpr, by=cv.height-M.b*dpr;
+  view.x = (cx-ox)-((cx-ox)-view.x)*f; view.y = (by-cy)-((by-cy)-view.y)*f;
+  view.sx*=f; view.sy*=f; draw();
 }
 cv.addEventListener('pointerdown', e=>{ cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,[e.clientX,e.clientY]); cv.style.cursor='grabbing'; });
 cv.addEventListener('pointerup', e=>{ ptrs.delete(e.pointerId); lastDist=0; cv.style.cursor='grab'; });
@@ -121,12 +237,13 @@ cv.addEventListener('pointermove', e=>{
   const prev = ptrs.get(e.pointerId);
   if (!prev){ hover(e); return; }
   if (ptrs.size===1){
-    view.x += (e.clientX-prev[0])*dpr; view.y += (e.clientY-prev[1])*dpr;
+    view.x += (e.clientX-prev[0])*dpr; view.y -= (e.clientY-prev[1])*dpr;
     ptrs.set(e.pointerId,[e.clientX,e.clientY]); draw();
   } else {
     ptrs.set(e.pointerId,[e.clientX,e.clientY]);
     const [a,b]=[...ptrs.values()], d=Math.hypot(a[0]-b[0],a[1]-b[1]);
-    if (lastDist) zoomAt((a[0]+b[0])/2*dpr, (a[1]+b[1])/2*dpr, d/lastDist);
+    const r=cv.getBoundingClientRect();
+    if (lastDist) zoomAt(((a[0]+b[0])/2-r.left)*dpr, ((a[1]+b[1])/2-r.top)*dpr, d/lastDist);
     lastDist=d;
   }
 });
@@ -134,16 +251,18 @@ cv.addEventListener('wheel', e=>{ e.preventDefault(); zoomAt(e.offsetX*dpr, e.of
 cv.addEventListener('dblclick', ()=>{ fit(); draw(); });
 
 function hover(e){
-  const mx=e.offsetX*dpr, my=e.offsetY*dpr; let best=-1, bd=(12*dpr)**2;
-  for (let i=0;i<pts.length;i+=2){
-    const dx=X(pts[i])-mx, dy=Y(pts[i+1])-my, d=dx*dx+dy*dy;
-    if (d<bd){bd=d;best=i/2;}
-  }
-  $('tip').textContent = best<0 ? 'Drag to pan, wheel/pinch to zoom, double-click to reset. Hover a point for its coordinates.'
-    : `p${'ₙ'} #${best+1} = ${primes[best]}   (x, y) = (${pts[2*best]}, ${pts[2*best+1]})`;
+  const mx=e.offsetX*dpr, my=e.offsetY*dpr, P=plot(); let best=-1, bd=(12*dpr)**2;
+  if (mx>=P.x0&&mx<=P.x1&&my>=P.y0&&my<=P.y1)
+    for (let i=0;i<pts.length;i+=2){
+      const dx=X(pts[i])-mx, dy=Y(pts[i+1])-my, d=dx*dx+dy*dy;
+      if (d<bd){bd=d;best=i/2;}
+    }
+  $('tip').textContent = best<0 ? HINT : `prime #${best+1} = ${primes[best]}   (x, y) = (${pts[2*best]}, ${pts[2*best+1]})`;
 }
 
 $('mode').onchange = build;
+$('render').onchange = draw;
+$('logx').onchange = () => { fit(); draw(); };
 let t; $('n').oninput = () => { $('nv').textContent=(+$('n').value).toLocaleString(); clearTimeout(t); t=setTimeout(build,150); };
 window.addEventListener('resize', resize);
 resize(); build();

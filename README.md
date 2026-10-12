@@ -6,7 +6,7 @@
 [![Runs on real IBM Quantum hardware](https://img.shields.io/badge/hardware-IBM%20Quantum-000000)](https://quantum.cloud.ibm.com/)
 
 
-**[▶ Live prime plot](https://otisranson.github.io/quantum-prime-gaps/)** — interactive (x, y) plot of every prime up to 2,000,000: Ulam spiral, (n, pₙ), or (pₙ, gap). Pan/zoom, hover for coordinates. Source: [`docs/index.html`](docs/index.html).
+**[▶ Live prime plot](https://otisranson.github.io/quantum-prime-gaps/)** — interactive (x, y) plot of every prime up to 2,000,000: gaps (pₙ, pₙ₊₁ − pₙ), Ulam spiral, or (n, pₙ). Labelled axes, log-scaled density heat map or points, optional log x, pan/zoom, hover for coordinates. Source: [`docs/index.html`](docs/index.html).
 
 ---
 
