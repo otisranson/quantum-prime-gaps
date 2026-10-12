@@ -6,33 +6,44 @@
 [![Runs on real IBM Quantum hardware](https://img.shields.io/badge/hardware-IBM%20Quantum-000000)](https://quantum.cloud.ibm.com/)
 
 
-**[▶ Live prime plot](https://otisranson.github.io/quantum-prime-gaps/)** — interactive (x, y) plot of every prime up to 2,000,000: gaps (pₙ, pₙ₊₁ − pₙ), Ulam spiral, or (n, pₙ). Labelled axes, log-scaled density heat map or points, optional log x, pan/zoom, hover for coordinates. Source: [`docs/index.html`](docs/index.html).
+## Live demo
+
+**[▶ Explore the primes in your browser](https://otisranson.github.io/quantum-prime-gaps/)**
+
+[![Prime gaps density plot: gap size against prime, showing bands at multiples of 6](docs/prime_gaps_density.png)](https://otisranson.github.io/quantum-prime-gaps/)
+
+An interactive (x, y) plot of every prime up to 2,000,000. Switch between gaps `(pₙ, pₙ₊₁ − pₙ)`, the
+Ulam spiral, and `(n, pₙ)`; render as a log-scaled density map or raw points; optionally put x on a
+log scale; pan, zoom, and hover for exact coordinates. Single self-contained file:
+[`docs/index.html`](docs/index.html).
 
 ---
 
 ## What this is
 
-This project asks a simple question: **can a quantum circuit predict the next prime number?**
+This project explores the structure of **prime gaps** (the differences between consecutive primes: 1, 2, 2, 4, 2, 4, ...) with quantum circuits and classical statistics. **It does not predict primes.** There is no method here that forecasts the next prime or gap better than simple baselines, and nothing in this repo should be read as evidence that one exists.
 
-We take the first 50 primes, compute the 49 gaps between them (2, 1, 2, 4, 2, 4, ...), and feed those gaps into real IBM quantum hardware. A 4-qubit circuit encodes each group of 4 consecutive gaps as rotation angles, runs them through a Quantum Fourier Transform, and produces a probability distribution over possible next gaps. A recurrent feedback loop — 46 windows, one per consecutive group of 4 gaps — carries the most likely outcome forward each time. The final window predicts the 50th gap.
+What it does contain:
 
-**The hardware got it right.** After 46 sequential jobs on ibm_kingston (a 156-qubit IBM quantum processor), the weighted probability distribution predicted **gap = 4, prime = 233** — the correct answer — with error 0.04.
+- **A quantum-circuit experiment on real IBM hardware.** The first 50 primes' 49 gaps are fed through a recurrent 4-qubit circuit (windows of 4 gaps encoded as rotation angles, then a Quantum Fourier Transform), 46 windows in sequence, on ibm_kingston (156 qubits). The final decoded output landed on gap = 4 (prime 233), which matches the true next gap with error 0.04.
+- **Statistical analysis of the gap sequence at scale.** Changepoint detection, kurtosis, spectral, phase and self-similarity tests on the first 20,000 gaps. Almost everything came back null; the only real structure is the expected logarithmic growth of gap size (see [Recent Findings](#recent-findings)).
+- **An interactive plot** of the primes (above).
 
 ![Kingston hardware run scorecard](quantum_prime_gaps/screenshots/prime_predictor/summary_hw.png)
 
-This is a research/exploration project. The prediction is correct, but prime gaps don't have the kind of periodic structure that makes a QFT-based extrapolation meaningful in general — the honest framing is "the circuit found the right answer on this instance," not "we solved prime prediction." The interesting result is that entanglement structure survives 46 rounds of real hardware noise well enough for the weighted expectation to land on the correct gap.
+**How to read the hardware result.** A single match on a single instance is not a prediction. The target gap (4) is also the median of all earlier gaps, so a classical baseline that just repeats the median gets it right with no quantum hardware at all (see [Classical Baselines](#classical-baselines)), and a slightly harder follow-up target already fails that baseline. Prime gaps have no known periodic structure that a Fourier-style extrapolation could exploit, and the backward-verification tests below confirm that: none of the Fourier-based methods beat repeating the mean or last gap. What the hardware run does show is narrower: entanglement structure survives 46 rounds of real hardware noise well enough for the decoded gap to land on the correct value on this one instance, which is an engineering result about noise, not a result about primes.
 
 ---
 
-## Results at a glance
+## Hardware results at a glance
 
-| Run | Backend | E[gap] | Predicted prime | Correct? |
-|-----|---------|--------|-----------------|----------|
+| Run | Backend | E[gap] | Decoded prime | Matches true value? |
+|-----|---------|--------|---------------|---------------------|
 | AerSimulator (clean) | software | 4.006 | 233 | ✓ |
 | AerSimulator (Kingston noise model) | software | 4.27 | 233 | ✓ |
 | **ibm_kingston hardware** | **real hardware** | **3.958** | **233** | **✓** |
 
-46 hardware jobs, 8,192 shots each, full recurrent feedback loop. Committed as `13c57e6`.
+46 hardware jobs, 8,192 shots each, full recurrent feedback loop. Committed as `13c57e6`. One target, one run: a match here is not a measure of predictive skill.
 
 ![MI across all 46 hardware windows](quantum_prime_gaps/screenshots/prime_predictor/mi_hw.png)
 
@@ -66,13 +77,14 @@ Worth another look, not yet a confirmed finding.
 
 ## Contents
 
-- [`prime_predictor.py`](#prime-predictor) — recurrent 4-qubit prime gap predictor, simulator version
-- [`prime_predictor_hw.py`](#prime-predictor-hardware) — same predictor on real ibm_kingston hardware
+- [`prime_predictor.py`](#recurrent-circuit--simulator) — recurrent 4-qubit prime-gap circuit experiment, simulator version
+- [`prime_predictor_hw.py`](#recurrent-circuit--hardware) — same circuit on real ibm_kingston hardware
 - [`terrain_visualizer.py`](#terrain-visualizer) — topographic landscape renderer from recorded hardware distributions
 - [`classical_baseline.py`](#classical-baselines) — deterministic baseline comparison against the hardware result
-- [`quantum_prime_gaps/`](#quantum_prime_gaps) — original QFT spectral analysis of the full gap sequence, 7-qubit hardware runs, qubit correlation analysis
+- [`quantum_prime_gaps/`](#quantum_prime_gaps) — original QFT spectral analysis of the full gap sequence, 7-qubit hardware runs, qubit correlation analysis (including documented negative forecasting results)
 - [`optimize_4qubit.py`](#optimize_4qubit) — circuit depth reduction comparison (5 strategies against Kingston's real coupling map)
-- [`quantum_evolve/`](#quantum_evolve) — [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve) experiment evolving the prediction reconstruction step
+- [`quantum_evolve/`](#quantum_evolve) — [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve) experiment trying to improve the Fourier reconstruction step (aimed at a negative result)
+- [`docs/`](docs/index.html) — the interactive prime plot
 
 ## Setup
 
@@ -95,16 +107,16 @@ python3 -m venv .venv
 
 ---
 
-## Prime Predictor
+## Recurrent Circuit — Simulator
 
-**`prime_predictor.py`** — recurrent 4-qubit prime gap predictor running on AerSimulator.
+**`prime_predictor.py`** — recurrent 4-qubit prime-gap circuit running on AerSimulator. (The filename is historical; it decodes an output gap but does not predict in any validated sense.)
 
-The predictor slides a 4-gap window across the 49 known prime gaps. Each window builds a
+The circuit slides a 4-gap window across the 49 known prime gaps. Each window builds a
 quantum circuit: a Bell pair seeds entanglement, four RY gates encode the window's gaps as rotation
 angles (normalized locally to the window's max gap, not globally), and an approximated inverse QFT
 (degree=1) applies the frequency transform. Measuring the 4-qubit register produces a bitstring;
 that bitstring feeds back as per-qubit angle offsets into the next window's circuit. After 46
-windows the final distribution is decoded into a predicted gap.
+windows the final distribution is decoded into a single gap value.
 
 The key design insight is **local window normalization**: dividing each gap by the window's own
 maximum rather than the global maximum of 14. With global normalization, windows containing gaps of
@@ -118,13 +130,13 @@ interference pattern reflects the relative gap structure instead of absolute mag
 
 Writes timestamped output to `output/prime/{YYYYMMDD_HHMMSS}/`: `mi.png` (mutual information across
 windows), `dist_clean.png`, `dist_noisy.png` (distribution under Kingston noise model), and
-`summary.png` (prediction scorecard). Auto-commits and pushes each run.
+`summary.png` (scorecard). Auto-commits and pushes each run.
 
-![Simulator prediction scorecard](quantum_prime_gaps/screenshots/prime_predictor/summary_sim.png)
+![Simulator scorecard](quantum_prime_gaps/screenshots/prime_predictor/summary_sim.png)
 
-## Prime Predictor — Hardware
+## Recurrent Circuit — Hardware
 
-**`prime_predictor_hw.py`** — same recurrent predictor submitted to ibm_kingston.
+**`prime_predictor_hw.py`** — same recurrent circuit submitted to ibm_kingston.
 
 Runs all 46 windows sequentially on real hardware: each job waits for its result before the next
 circuit is built and submitted, preserving the feedback chain exactly as in the simulator. A
@@ -171,7 +183,7 @@ Writes `terrain_static.png` and `terrain_animated.gif` to a timestamped subdirec
 ## Classical Baselines
 
 **`classical_baseline.py`** — runs six deterministic classical predictors against the same target
-(gap after prime 229, ground truth gap=4) and compares them to the quantum hardware result.
+(gap after prime 229, ground truth gap=4) and compares them to the quantum hardware result. This is a sanity check on how much a single match is worth, not a ranking of forecasters.
 
 | Method | Raw E[gap] | Rounded | Error | Correct? |
 |--------|:----------:|:-------:|------:|:--------:|
@@ -186,7 +198,7 @@ Writes `terrain_static.png` and `terrain_animated.gif` to a timestamped subdirec
 The median predictor is the honest strong baseline — it gets the correct answer with zero compute
 because the median of prime gaps 1–229 happens to equal 4. The generalization test (`prime239_generalization.py`)
 moves the target to gap=6 (prime 239), where the median predicts 4 and fails, while the quantum
-circuit reaches E[gap]=5.43 — a near-miss that sits closer to the true answer than any other method.
+circuit reaches E[gap]=5.43, a near-miss. Two targets is far too small a sample to claim the circuit does better than the baselines.
 
 ```bash
 ./.venv/bin/python classical_baseline.py
@@ -194,7 +206,7 @@ circuit reaches E[gap]=5.43 — a near-miss that sits closer to the true answer 
 
 ## optimize_4qubit
 
-**`optimize_4qubit.py`** — compares five circuit strategies for the 4-qubit predictor against
+**`optimize_4qubit.py`** — compares five circuit strategies for the 4-qubit circuit against
 Kingston's real coupling map, choosing the best depth/MI tradeoff before committing to hardware.
 
 | Strategy | Depth | ECR | Sim root MI | Verdict |
