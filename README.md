@@ -14,7 +14,7 @@
 
 An interactive (x, y) plot of every prime up to 2,000,000. Switch between gaps `(pₙ, pₙ₊₁ − pₙ)`, the
 Ulam spiral, and `(n, pₙ)`; render as a log-scaled density map or raw points; optionally put x on a
-log scale; pan, zoom, and hover for exact coordinates. Single self-contained file:
+log scale; overlay the Cramér random-model quantiles against the observed ones; pan, zoom, and hover for exact coordinates. Single self-contained file:
 [`docs/index.html`](docs/index.html).
 
 ---

@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Prime Plot</title>
 <style>
-  :root{--bg:#0b0e14;--fg:#d6deeb;--dim:#7d8aa3;--accent:#7fdbca;--panel:#131826;--grid:#1d2433}
-  @media (prefers-color-scheme: light){:root{--bg:#f7f8fa;--fg:#1c2330;--dim:#5b6780;--accent:#0b7a6b;--panel:#e9ecf2;--grid:#e3e7ee}}
+  :root{--bg:#0b0e14;--fg:#d6deeb;--dim:#7d8aa3;--accent:#7fdbca;--panel:#131826;--grid:#1d2433;--model:#ffffff;--emp:#ff9f43}
+  @media (prefers-color-scheme: light){:root{--bg:#f7f8fa;--fg:#1c2330;--dim:#5b6780;--accent:#0b7a6b;--panel:#e9ecf2;--grid:#e3e7ee;--model:#1c2330;--emp:#d9480f}}
   html,body{margin:0;height:100%;display:flex;flex-direction:column;background:var(--bg);color:var(--fg);font:14px system-ui,sans-serif}
   #bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:8px 16px;background:var(--panel)}
   #bar label{display:flex;align-items:center;gap:6px}
@@ -31,6 +31,7 @@
       <option value="points">Points</option>
     </select>
   </label>
+  <label id="modl"><input id="model" type="checkbox"> Cramér overlay</label>
   <label id="logl"><input id="logx" type="checkbox"> log x</label>
   <label>Max N <input id="n" type="range" min="1000" max="2000000" step="1000" value="200000">
     <span id="nv"></span></label>
@@ -81,6 +82,7 @@ function build(){
   const N = +$('n').value, mode = $('mode').value;
   $('nv').textContent = N.toLocaleString();
   $('logl').style.opacity = mode==='ulam' ? .35 : 1;
+  $('modl').style.opacity = mode==='gap' ? 1 : .35;
   primes = sieve(N);
   pts = new Float64Array(primes.length*2);
   for (let i=0;i<primes.length;i++){
@@ -203,7 +205,47 @@ function draw(){
   ctx.fillText(LABELS[mode][0]+(isLog()?'  (log scale)':''), (P.x0+P.x1)/2, cv.height-4*dpr);
   ctx.save(); ctx.translate(14*dpr,(P.y0+P.y1)/2); ctx.rotate(-Math.PI/2); ctx.textBaseline='top';
   ctx.fillText(LABELS[mode][1],0,-6*dpr); ctx.restore();
+  if ($('model').checked && mode==='gap') drawModel(P);
   if (dens && mx) legend(P,mx);
+}
+// Cramér model: near p, gaps ~ Exponential(mean ln p).  Quantile q of gap = -ln(1-q)*ln(p).
+// Solid orange = empirical quantile of the plotted primes in each x-bin; dashed = model.
+const QS=[0.5,0.9,0.99,0.999];
+function drawModel(P){
+  ctx.save(); ctx.beginPath(); ctx.rect(P.x0,P.y0,P.x1-P.x0,P.y1-P.y0); ctx.clip();
+  const lw=2*dpr, nb=40, lg=isLog();
+  const lo=tx(Math.max(3,pts[0])), hi=tx(pts[pts.length-2]||3);
+  // model curves, drawn at many x
+  ctx.setLineDash([6*dpr,4*dpr]); ctx.strokeStyle=css('--model'); ctx.lineWidth=lw*0.8;
+  const xs=[]; for(let i=0;i<=200;i++){ const t=lo+(hi-lo)*i/200; xs.push(lg?10**t:t); }
+  const curve=(f)=>{ ctx.beginPath(); xs.forEach((x,i)=>{ const px=X(x),py=Y(f(x)); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }); ctx.stroke(); };
+  for (const q of QS) curve(x=>-Math.log(1-q)*Math.log(x));
+  ctx.setLineDash([2*dpr,4*dpr]); curve(x=>Math.log(x)**2);        // Cramér's conjectured max-gap scale
+  ctx.setLineDash([]);
+  // empirical quantiles per bin
+  const bins=Array.from({length:nb},()=>[]);
+  for (let i=0;i<pts.length;i+=2){ const x=pts[i]; if(x<3) continue; const t=(tx(x)-lo)/(hi-lo);
+    bins[Math.min(nb-1,Math.floor(t*nb))].push([x,pts[i+1]]); }
+  ctx.strokeStyle=css('--emp'); ctx.lineWidth=lw;
+  for (const q of QS){
+    ctx.beginPath(); let started=false;
+    for (const b of bins){
+      if (b.length*(1-q)<3) { started=false; continue; }   // too few samples for that tail
+      const g=b.map(v=>v[1]).sort((a,c)=>a-c), xm=b.reduce((a,v)=>a+v[0],0)/b.length;
+      const yv=g[Math.min(g.length-1,Math.floor(q*g.length))], px=X(lg?10**((tx(b[0][0])+tx(b[b.length-1][0]))/2):xm), py=Y(yv);
+      started?ctx.lineTo(px,py):ctx.moveTo(px,py); started=true;
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+  // labels at the right edge of the model curves + key
+  ctx.font=`${11*dpr}px system-ui,sans-serif`; ctx.fillStyle=css('--model'); ctx.textAlign='left'; ctx.textBaseline='middle';
+  const kx=P.x0+12*dpr, ky=P.y0+14*dpr;
+  ctx.fillStyle=css('--panel'); ctx.globalAlpha=.85; ctx.fillRect(kx-6*dpr,ky-10*dpr,300*dpr,66*dpr); ctx.globalAlpha=1;
+  const key=(y,dash,col,txt)=>{ ctx.setLineDash(dash); ctx.strokeStyle=col; ctx.lineWidth=2*dpr; ctx.beginPath(); ctx.moveTo(kx,y); ctx.lineTo(kx+28*dpr,y); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle=css('--fg'); ctx.fillText(txt,kx+36*dpr,y); };
+  key(ky,[6*dpr,4*dpr],css('--model'),'Cramér model: gap quantiles 50/90/99/99.9% = −ln(1−q)·ln p');
+  key(ky+18*dpr,[],css('--emp'),'Observed quantiles of these primes (same levels)');
+  key(ky+36*dpr,[2*dpr,4*dpr],css('--model'),'ln²p  (Cramér\'s conjectured max-gap scale)');
 }
 function legend(P,mx){
   const w=120*dpr,h=10*dpr,x=P.x1-w-10*dpr,y=P.y0+24*dpr;
@@ -262,6 +304,7 @@ function hover(e){
 
 $('mode').onchange = build;
 $('render').onchange = draw;
+$('model').onchange = draw;
 $('logx').onchange = () => { fit(); draw(); };
 let t; $('n').oninput = () => { $('nv').textContent=(+$('n').value).toLocaleString(); clearTimeout(t); t=setTimeout(build,150); };
 window.addEventListener('resize', resize);
