@@ -5,6 +5,9 @@
 [![Built with Qiskit](https://img.shields.io/badge/built%20with-Qiskit-6929C4)](https://www.ibm.com/quantum/qiskit)
 [![Runs on real IBM Quantum hardware](https://img.shields.io/badge/hardware-IBM%20Quantum-000000)](https://quantum.cloud.ibm.com/)
 
+
+**[▶ Live prime plot](https://otisranson.github.io/quantum-prime-gaps/)** — interactive (x, y) plot of every prime up to 2,000,000: Ulam spiral, (n, pₙ), or (pₙ, gap). Pan/zoom, hover for coordinates. Source: [`docs/index.html`](docs/index.html).
+
 ---
 
 ## What this is

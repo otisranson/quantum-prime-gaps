@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prime Plot</title>
+<style>
+  :root{--bg:#0b0e14;--fg:#d6deeb;--dim:#7d8aa3;--accent:#7fdbca;--panel:#131826}
+  @media (prefers-color-scheme: light){:root{--bg:#f7f8fa;--fg:#1c2330;--dim:#5b6780;--accent:#0b7a6b;--panel:#e9ecf2}}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:14px system-ui,sans-serif}
+  #bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:8px 16px;background:var(--panel)}
+  #bar label{display:flex;align-items:center;gap:6px}
+  select,input{font:inherit}
+  #info{color:var(--dim);margin-left:auto}
+  canvas{display:block;width:100%;height:calc(100% - 90px);touch-action:none;cursor:grab}
+  #tip{padding:4px 16px;color:var(--dim);height:20px}
+</style>
+</head>
+<body>
+<div id="bar">
+  <label>Layout
+    <select id="mode">
+      <option value="ulam">Ulam spiral — each prime at its (x, y) grid cell</option>
+      <option value="seq">Sequence — (n, pₙ)</option>
+      <option value="gap">Gaps — (pₙ, pₙ₊₁ − pₙ)</option>
+    </select>
+  </label>
+  <label>Max N <input id="n" type="range" min="1000" max="2000000" step="1000" value="200000">
+    <span id="nv"></span></label>
+  <span id="info"></span>
+</div>
+<div id="tip">Drag to pan, wheel/pinch to zoom, double-click to reset. Hover a point for its coordinates.</div>
+<canvas id="c"></canvas>
+<script>
+"use strict";
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+let primes = [], pts = [], view = {x:0, y:0, s:1}, dpr = 1;
+
+function sieve(n){
+  const f = new Uint8Array(n+1); const out = [];
+  for (let i=2;i<=n;i++){
+    if (!f[i]){ out.push(i); for (let j=i*i;j<=n;j+=i) f[j]=1; }
+  }
+  return out;
+}
+
+// Ulam spiral: 1 at (0,0), 2 to its right, then counter-clockwise (y up).
+function ulam(n){
+  if (n===1) return [0,0];
+  const k = Math.ceil((Math.sqrt(n)-1)/2), side = 2*k, base = (2*k-1)**2;
+  const d = n-base-1, q = Math.floor(d/side), r = d%side;
+  switch(q){
+    case 0: return [k, -k+1+r];       // right edge, going up
+    case 1: return [k-1-r, k];        // top edge, going left
+    case 2: return [-k, k-1-r];       // left edge, going down
+    default: return [-k+1+r, -k];     // bottom edge, going right
+  }
+}
+
+function build(){
+  const N = +$('n').value, mode = $('mode').value;
+  $('nv').textContent = N.toLocaleString();
+  primes = sieve(N);
+  pts = new Float64Array(primes.length*2);
+  const labels = [];
+  for (let i=0;i<primes.length;i++){
+    const p = primes[i]; let x,y;
+    if (mode==='ulam'){ [x,y] = ulam(p); }
+    else if (mode==='seq'){ x = i+1; y = p; }
+    else { x = p; y = (primes[i+1]||p) - p; }
+    pts[2*i]=x; pts[2*i+1]=y;
+  }
+  $('info').textContent = primes.length.toLocaleString()+' primes ≤ '+N.toLocaleString();
+  fit(); draw();
+}
+
+function fit(){
+  let x0=1e18,x1=-1e18,y0=1e18,y1=-1e18;
+  for (let i=0;i<pts.length;i+=2){
+    x0=Math.min(x0,pts[i]);x1=Math.max(x1,pts[i]);
+    y0=Math.min(y0,pts[i+1]);y1=Math.max(y1,pts[i+1]);
+  }
+  const w=cv.width, h=cv.height, pad=20*dpr;
+  const sx=(w-2*pad)/Math.max(1,x1-x0), sy=(h-2*pad)/Math.max(1,y1-y0);
+  if ($('mode').value==='ulam'){ view.s=Math.min(sx,sy); view.sy=view.s; view.flip=true; }
+  else { view.s=sx; view.sy=sy; view.flip=true; }
+  view.x=w/2-view.s*(x0+x1)/2; view.y=h/2+view.sy*(y0+y1)/2;
+}
+
+const X = x => view.x + x*view.s;
+const Y = y => view.y - y*view.sy;
+
+function draw(){
+  ctx.fillStyle = getComputedStyle(document.body).backgroundColor;
+  ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent');
+  const sz = Math.max(1, Math.min(4*dpr, view.s*0.8)), w=cv.width, h=cv.height;
+  for (let i=0;i<pts.length;i+=2){
+    const px=X(pts[i]), py=Y(pts[i+1]);
+    if (px<-5||py<-5||px>w+5||py>h+5) continue;
+    ctx.fillRect(px-sz/2, py-sz/2, sz, sz);
+  }
+}
+
+function resize(){
+  dpr = window.devicePixelRatio||1;
+  cv.width = cv.clientWidth*dpr; cv.height = cv.clientHeight*dpr;
+  if (pts.length){ fit(); draw(); }
+}
+
+// pan / zoom
+const ptrs = new Map(); let lastDist = 0;
+function zoomAt(cx, cy, f){
+  view.x = cx-(cx-view.x)*f; view.y = cy-(cy-view.y)*f;
+  view.s*=f; view.sy*=f; draw();
+}
+cv.addEventListener('pointerdown', e=>{ cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,[e.clientX,e.clientY]); cv.style.cursor='grabbing'; });
+cv.addEventListener('pointerup', e=>{ ptrs.delete(e.pointerId); lastDist=0; cv.style.cursor='grab'; });
+cv.addEventListener('pointermove', e=>{
+  const prev = ptrs.get(e.pointerId);
+  if (!prev){ hover(e); return; }
+  if (ptrs.size===1){
+    view.x += (e.clientX-prev[0])*dpr; view.y += (e.clientY-prev[1])*dpr;
+    ptrs.set(e.pointerId,[e.clientX,e.clientY]); draw();
+  } else {
+    ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+    const [a,b]=[...ptrs.values()], d=Math.hypot(a[0]-b[0],a[1]-b[1]);
+    if (lastDist) zoomAt((a[0]+b[0])/2*dpr, (a[1]+b[1])/2*dpr, d/lastDist);
+    lastDist=d;
+  }
+});
+cv.addEventListener('wheel', e=>{ e.preventDefault(); zoomAt(e.offsetX*dpr, e.offsetY*dpr, Math.exp(-e.deltaY*0.0015)); }, {passive:false});
+cv.addEventListener('dblclick', ()=>{ fit(); draw(); });
+
+function hover(e){
+  const mx=e.offsetX*dpr, my=e.offsetY*dpr; let best=-1, bd=(12*dpr)**2;
+  for (let i=0;i<pts.length;i+=2){
+    const dx=X(pts[i])-mx, dy=Y(pts[i+1])-my, d=dx*dx+dy*dy;
+    if (d<bd){bd=d;best=i/2;}
+  }
+  $('tip').textContent = best<0 ? 'Drag to pan, wheel/pinch to zoom, double-click to reset. Hover a point for its coordinates.'
+    : `p${'ₙ'} #${best+1} = ${primes[best]}   (x, y) = (${pts[2*best]}, ${pts[2*best+1]})`;
+}
+
+$('mode').onchange = build;
+let t; $('n').oninput = () => { $('nv').textContent=(+$('n').value).toLocaleString(); clearTimeout(t); t=setTimeout(build,150); };
+window.addEventListener('resize', resize);
+resize(); build();
+</script>
+</body>
+</html>
