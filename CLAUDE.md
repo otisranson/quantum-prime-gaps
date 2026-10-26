@@ -276,3 +276,60 @@ closed: the period-2.29 phase-jump test's p=0.056 is the closest-to-significant 
 five stages, though it wasn't corrected for the 6 comparisons run in that same stage and should be
 checked for robustness across STFT window sizes before it's treated as anything more than noise — not
 attempted this session.
+
+## Session Log: 2026-10-26 — Predictive Framing (HMM Under the Log Channel) and a 2kp+1 Side Exploration
+
+Changed approach from describing structure (regimes, waves) to **predicting the next gap on held-out
+primes**, scored by one-step-ahead predictive log-likelihood (80/20 split; rolling-origin folds in
+round 3). Full tables, per-prediction verdicts, and caveats are in
+`hypotheses/predictive_hmm_gap_model.md` (three rounds, each prediction committed before its run).
+
+**Scripts** (all at repo root, run with `.venv-analysis/bin/python`; `gap_hmm_singular_series.py` and
+`gap_hmm_wheel.py` import helpers from `gap_hmm_predictive.py`, so run them from the repo root):
+- `gap_hmm_predictive.py` — round 1. Geometric emission, mean = m·ln p/2. Baselines: B0 (force alone),
+  B1 (m by previous gap), HMM K=1..6.
+- `gap_hmm_singular_series.py` — round 2. Categorical emission with Hardy-Littlewood singular-series
+  weight S(g) = prod over odd primes q|g of (q-1)/(q-2); each state/class has (m, c).
+- `gap_hmm_wheel.py` — round 3. Adds a hard mask: p+g not divisible by 3,5 (W=30) or 3,5,7 (W=210);
+  lag-2 contexts; 5 rolling-origin folds. Data restricted to p >= 11 so the mask is valid.
+- `experiments/twokp_first_k.py` — unrelated side exploration, see below.
+
+**Results (held-out nats/gap):**
+1. **Latent-state hypothesis refuted three times.** K-state HMMs with free scale and shape per state
+   collapse to a single state (identical held-out score for K=1..6 / K=2 within 1e-5). No hidden
+   slow regime exists that a forecast can use. Under every emission, train BIC rises with K.
+2. **The "force" is ln p + singular series + sieve constraint.** Singular series beats the plain
+   geometric by +0.055; the mod-30 wheel mask adds +0.606 more; mod-210 a further +0.185. **These
+   gains are arithmetic, not discovery** — the mask is a deterministic sieve rule, and pushing the
+   wheel up only moves toward knowing the answer exactly.
+3. **One residual effect survives: the previous gap.** Scale by previous-gap class adds
+   ~+0.0026 nats/gap (z ~ 2.9), same sign in 5/5 rolling folds, and does NOT shrink under bigger
+   wheels (W=210, 2310; exploratory, not pre-registered). Short gaps are followed by longer-scale ones
+   and vice versa (Lemke Oliver-Soundararajan direction). Lag 2 adds nothing (-0.0005, z -0.75).
+4. **Failed predictions, kept on record:** round 2 expected the previous-gap gain to shrink (it grew);
+   round 3 expected a residue-based previous-gap context (prev k mod 15) to beat the capped one (it was
+   slightly worse). Round 3's exploratory observation that the previous-gap effect looks flat at p ~
+   80-110k and ~+0.003 at p ~ 180-225k is within fold noise (SE ~0.001) — flagged, not claimed.
+
+**Open threads from this session:**
+- Does the previous-gap effect really grow with position? Needs a bigger prime cache (the 20k cache
+  is too short); cheap to do with a segmented sieve.
+- A latent variable that *drifts with position* (non-stationary) is the one version of the hidden
+  force that a stationary-transition HMM cannot represent and these tests do not rule out.
+- Never run: variance-expansion test and the phi vs pi/3 control from the original 2026-08-16 plan.
+- Period-2.29 phase-jump robustness across STFT window sizes (p=0.056 from 2026-08-23) and the four
+  unresolvable long-period components — unchanged, still open.
+
+**Side exploration — 2kp+1 as a number generator** (`experiments/twokp_first_k.py`, not part of the
+hypothesis log). For each odd prime p, the first k with 2kp+1 prime. Over the 2,260 primes
+p = 5..19,997: mean first k = 5.46, median 4, max 39; mean grows ~ (1/2)ln(6p) (density predictor
+within ~5%). Individual k is not predictable: MAE of the density predictor 3.33 vs 3.42 for a constant,
+and the previous k is worse (4.58); lag-1 correlation +0.02. For the first 12 primes
+k = 1,1,1,2,1,2,3,5,1,1,5,2; k=1 gives a prime at 50% of the first 12 primes and 40% of the first 25
+(Sophie Germain primes — a low-p effect that falls with p). Same pattern as the gaps: a predictable
+log trend plus an unpredictable remainder with no memory. (User explicitly dropped the 2^p-1 /
+Mersenne framing for this thread; the factor-finding rule only needs p prime and is not used here.)
+
+**Process notes:** predictions were committed before each run per the `hypotheses/` convention. A bug
+in the singular-series routine (skipped the factor of 2, so S(6)=1) was caught by checking S(6)=2,
+S(10)=4/3, S(30)=8/3 *before* fitting anything; the check is worth repeating if that code is touched.
