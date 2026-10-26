@@ -88,3 +88,23 @@ held-out forecast can use. What the data supports is the log channel (determinis
   explicit mod-6 factors) is the fairer test of whether any latent state exists.
 - Only the scale (mean) is state-dependent. A state could modulate shape/variance instead.
 - Single split (last 20%), single seed set. Not yet checked across rolling-origin folds.
+
+## Round 2 — Singular-Series Emission (prediction locked before run, 2026-10-26)
+
+Addresses the first caveat above. `gap_hmm_singular_series.py`. Emission over k = gap/2, k = 1..150:
+`P(k | m, c, p) ∝ S(2k)^c * exp(-k * 2 / (m ln p))`, normalised numerically, with
+S(g) = prod over odd primes q | g of (q-1)/(q-2) (Hardy-Littlewood singular series). ln p is quantised
+to 0.02 so normalisers can be tabulated; this is applied identically to every model. Each HMM state
+has its own (m_s, c_s), so states may modulate shape (c) as well as scale (m).
+
+Models: S0f (m fitted, c=1), S1 (m by previous-gap class), S1c (m and c by previous-gap class, the
+strongest non-latent baseline, 10 params), HMM K = 1,2,3,4. Same 80/20 split and scoring as round 1.
+
+**Predictions:**
+1. S0f beats round-1 B0f by a clear margin (>= 0.01 nats/gap): the geometric misfit was real.
+2. S1c beats S0f, but by less than the round-1 B1 gain (< 0.004): part of the "previous gap" effect in
+   round 1 was the mod-3/5 structure leaking through, not true gap repulsion.
+3. **No HMM beats S1c.** "HMM wins" needs BOTH >= 0.002 nats/gap AND z >= 3 over S1c. I predict this
+   fails for every K, and that K>=2 fitted (m_s, c_s) collapse to near-duplicates or short-lived
+   states (self-transition < 0.95), as in round 1.
+4. Train BIC picks K=1 among the HMMs.
