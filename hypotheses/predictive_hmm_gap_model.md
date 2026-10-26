@@ -79,7 +79,7 @@ Train 15,998 gaps, test 4,000 (held-out tail). Held-out nats/gap, difference vs 
 **Conclusion: REFUTED for this model class.** Under a geometric-mean-scale emission, a hidden
 slowly-varying "force" modulating the local gap scale around ln p does not exist in any way a
 held-out forecast can use. What the data supports is the log channel (deterministic, in B0) plus a
-~0.4% nats/gap gain from knowing the previous gap.
+~0.004 nats/gap (~0.15%) gain from knowing the previous gap.
 
 **Caveats, not yet tested:**
 - The geometric emission family is misspecified: real gaps are not geometric, since gaps divisible by
