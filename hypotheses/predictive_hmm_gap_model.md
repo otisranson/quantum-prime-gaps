@@ -152,3 +152,31 @@ The only usable structure beyond the deterministic force is the observed previou
 **Still untested:** rolling-origin folds (single split used); gap-to-gap dependence beyond lag 1 (e.g.
 two previous gaps, or the residue of the prime itself, p mod 30); a *non-stationary* latent that
 changes with position in ways a stationary-transition HMM can't represent.
+
+## Round 3 — Wheel Constraint, Longer Memory, Rolling Folds (prediction locked before run, 2026-10-26)
+
+`gap_hmm_wheel.py`. Motivation: round 2 found a previous-gap effect that *grew* once the singular series
+was explicit. One candidate explanation I had not tested: given p, the next prime p+g cannot be divisible
+by 3, 5 (or 7), so conditioning on p mod 30 (or 210) removes impossible gaps outright. That is a hard
+constraint, a second-level "force", and the Lemke Oliver-Soundararajan bias is a statement about
+consecutive-prime *residues*, so a previous-gap context that is capped (k_prev in 1..5+) may be a poor
+proxy for it.
+
+Emission: round 2's `S(2k)^c * exp(-k*2/(m ln p))` over k = 1..150, additionally masked to gaps where
+p+2k is not divisible by the wheel primes {3,5} (W=30) or {3,5,7} (W=210); normalised over the allowed
+k. c = 1 fixed for all context models. Data restricted to p >= 11 so the mask is valid (otherwise p+2k
+may equal a wheel prime). Same 80/20 primary split; plus 5 expanding-window folds (train first
+f in {0.5..0.9}, test next 0.1) for the non-latent models.
+
+Models (W=30 unless stated): M0 (one m), M0_210, M1 (m by capped previous gap, 5 classes), M1r (m by
+previous k mod 15, i.e. previous gap mod 30, 15 classes), M2 (m by capped previous two gaps, 25
+classes), HMM K=2 on the M0 emission.
+
+**Predictions:**
+1. M0 beats round-2 S0f by >= 0.05 nats/gap. M0_210 beats M0 by a further >= 0.01.
+2. The capped previous-gap gain (M1 over M0) is smaller than round 2's 0.0043, since the wheel mask
+   absorbs part of what the previous gap was proxying.
+3. M1r (residue-based previous gap) beats M1 by >= 0.001: the repulsion lives in residue structure.
+4. M2 does NOT beat the best lag-1 model by >= 0.001 at z >= 2: no useful memory past one gap.
+5. HMM K=2 collapses to K=1 again (held-out within 0.0005 of M0).
+6. Rolling folds: sign of the best lag-1 model minus M0 is positive in >= 4 of 5 folds.
