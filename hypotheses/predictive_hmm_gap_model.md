@@ -48,3 +48,43 @@ correlations, and the hypotheses/ log is uniformly null on slow regime structure
 ## Status
 
 Prediction locked 2026-10-26, ahead of the first run.
+
+## Empirical Check — First Run
+
+**Date checked:** 2026-10-26. `output/prime/20261026_161334/gap_hmm_predictive/results.json`.
+Train 15,998 gaps, test 4,000 (held-out tail). Held-out nats/gap, difference vs B1 (paired z):
+
+| model | params | test nats/gap | vs B0 | vs B1 (z) |
+|---|---|---|---|---|
+| B0 (force alone) | 0 | -2.71816 | 0 | -0.00393 (-3.95) |
+| B0f | 1 | -2.71819 | -0.00003 | -0.00396 (-3.98) |
+| **B1 (prev-gap class)** | 5 | **-2.71423** | **+0.00393** | 0 |
+| HMM K=1 | 1 | -2.71819 | -0.00003 | -0.00396 (-3.98) |
+| HMM K=2 | 4 | -2.71833 | -0.00017 | -0.00410 (-4.10) |
+| HMM K=3 | 9 | -2.71827 | -0.00011 | -0.00404 (-4.06) |
+| HMM K=4 | 16 | -2.71826 | -0.00010 | -0.00403 (-4.05) |
+| HMM K=6 | 36 | -2.71824 | -0.00008 | -0.00401 (-4.03) |
+
+**Against the locked prediction:**
+1. Held. B0f ~ B0 (fitted m = 1.004). B1 beats B0f on held-out data at z ~ 4; the size (0.004
+   nats/gap) is larger than the 1e-3 I guessed, but still tiny. B1's multipliers: after a gap of 2 the
+   next gap runs ~15% above the force (m=1.147), after a gap >=10 it runs ~5% below (0.946). Small
+   repulsion between consecutive gaps, the Lemke Oliver-Soundararajan direction.
+2. Held. No HMM beats B1; every HMM is slightly *worse* than B0 on held-out data (K>=2 overfit).
+3. Held. Fitted m_s spread is <= 0.07 (all states within ~1.00-1.07), and self-transitions are
+   0.82-0.93, i.e. short-lived, not a slow regime. For K>=3 the extra states are duplicates at
+   m=1.00; one state carries a mild +5% bump.
+4. Held. Train BIC is lowest for B1, then K=1; it worsens monotonically with K.
+
+**Conclusion: REFUTED for this model class.** Under a geometric-mean-scale emission, a hidden
+slowly-varying "force" modulating the local gap scale around ln p does not exist in any way a
+held-out forecast can use. What the data supports is the log channel (deterministic, in B0) plus a
+~0.4% nats/gap gain from knowing the previous gap.
+
+**Caveats, not yet tested:**
+- The geometric emission family is misspecified: real gaps are not geometric, since gaps divisible by
+  6 are favoured (singular series / mod-3 structure). A hidden state could in principle be needed
+  only to absorb that misfit; here it wasn't, but a richer emission (categorical on k, or with
+  explicit mod-6 factors) is the fairer test of whether any latent state exists.
+- Only the scale (mean) is state-dependent. A state could modulate shape/variance instead.
+- Single split (last 20%), single seed set. Not yet checked across rolling-origin folds.
