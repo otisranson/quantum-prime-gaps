@@ -180,3 +180,47 @@ classes), HMM K=2 on the M0 emission.
 4. M2 does NOT beat the best lag-1 model by >= 0.001 at z >= 2: no useful memory past one gap.
 5. HMM K=2 collapses to K=1 again (held-out within 0.0005 of M0).
 6. Rolling folds: sign of the best lag-1 model minus M0 is positive in >= 4 of 5 folds.
+
+## Empirical Check — Round 3 (Wheel Constraint, Longer Memory, Folds)
+
+**Date checked:** 2026-10-26. `output/prime/20261026_173636/gap_hmm_wheel/results.json`.
+19,995 gaps (p >= 11), train 15,996 / test 3,999. Held-out nats/gap:
+
+| model | params | train BIC/gap | test nats/gap | vs round-2 S0f | vs M0 (z) |
+|---|---|---|---|---|---|
+| S0f (round 2, no wheel) | 1 | 5.0961 | -2.66350 | 0 | -0.60623 |
+| M0 (W=30) | 1 | 3.8566 | -2.05727 | +0.60623 | 0 |
+| M0_210 (W=210) | 1 | 3.4818 | -1.87269 | +0.79081 | +0.18457 (z 75) |
+| M1 (capped prev gap, 5 cls) | 5 | 3.8558 | -2.05468 | +0.60882 | +0.00258 (z 2.87) |
+| M1r (prev k mod 15) | 15 | 3.8609 | -2.05569 | +0.60781 | +0.00158 (z 1.53) |
+| M2 (capped prev two gaps, 25 cls) | 25 | 3.8661 | -2.05519 | +0.60831 | +0.00208 (z 1.82) |
+| HMM K=2 (on M0 emission) | 4 | 3.8584 | -2.05727 | +0.60623 | 0.00000 |
+
+**Against the locked prediction:**
+1. **Held, hugely.** The wheel mask is worth +0.606 nats/gap over round 2's best force (vs the >= 0.05
+   predicted) and W=210 adds a further +0.185 (vs >= 0.01). Caveat that matters: this is arithmetic,
+   not discovered structure. "p+g cannot be divisible by 3, 5, 7" is a deterministic sieve constraint.
+   Pushing the wheel up only moves toward exact knowledge of the next prime. It is evidence that the
+   predictive scorecard rewards known number theory, not evidence about hidden structure.
+2. **Held.** Capped previous-gap gain shrank from round 2's 0.0043 to 0.0026 (z 2.9): the wheel mask
+   absorbed roughly 40% of it.
+3. **FAILED.** The residue-based previous-gap context (M1r) did NOT beat the capped one: -0.0010 (z -1.46).
+   The 15 classes are just noisier. The LOS effect I expected to find "in the residue of the previous
+   gap" is not better captured that way, in this model.
+4. **Held.** M2 - M1 = -0.0005 (z -0.75); M2 - M1r = +0.0005. No usable memory past one gap.
+5. **Held.** HMM K=2 collapses: m = 0.756 / 0.759, held-out identical to M0 to five decimals. Third
+   time a latent-state model has collapsed to one state.
+6. **Held.** M1 beats M0 in 5/5 rolling folds, mean +0.00144 nats/gap. But the fold deltas are
+   +0.00002, +0.00072, +0.00124, +0.00268, +0.00256: small and noisy early, larger later.
+
+**Exploratory (not pre-registered), same day:** repeating the M1-vs-M0 fold test with W=210 and with
+W=2310 (3,5,7,11) gives essentially the same picture (f=0.5: -0.00003 / -0.00014; f=0.8: +0.00296 /
++0.00264; f=0.9: +0.00212 / +0.00202; f=0.8 z = 2.3). The previous-gap effect does not shrink under a
+bigger wheel, so it is not a mod-3/5 artifact. Whether the apparent growth with position (flat near
+p ~ 80-110k, ~+0.003 near p ~ 180-225k) is real non-stationarity or noise cannot be told from five
+2,000-gap folds (each fold SE ~ 0.001). Flagged for a proper test, not claimed.
+
+**Net after three rounds:** (a) the force is ln p plus the singular series plus the sieve constraint;
+(b) a hidden latent state is refuted in three forms (geometric, singular-series, wheel-masked);
+(c) the one residual structure is a small previous-gap scale effect (~0.002-0.003 nats/gap, z ~ 2-3
+per split, 5/5 folds same sign) that survives bigger wheels but has no support from lag 2.
