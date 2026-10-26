@@ -108,3 +108,47 @@ strongest non-latent baseline, 10 params), HMM K = 1,2,3,4. Same 80/20 split and
    fails for every K, and that K>=2 fitted (m_s, c_s) collapse to near-duplicates or short-lived
    states (self-transition < 0.95), as in round 1.
 4. Train BIC picks K=1 among the HMMs.
+
+## Empirical Check — Round 2 (Singular-Series Emission)
+
+**Date checked:** 2026-10-26. `output/prime/20261026_170802/gap_hmm_singular_series/results.json`.
+Same 80/20 split (15,998 train, 4,000 test). Held-out nats/gap:
+
+| model | params | train BIC/gap | test nats/gap | vs S0f | vs S1c (z) |
+|---|---|---|---|---|---|
+| S0f (force + singular series) | 1 | 5.09552 | -2.66326 | 0 | -0.00515 (-3.36) |
+| S1 (m by prev-gap class) | 5 | 5.09232 | -2.65892 | +0.00434 | -0.00081 (-0.71) |
+| **S1c (m, c by prev-gap class)** | 10 | 5.08962 | **-2.65811** | **+0.00515** | 0 |
+| HMM K=1 | 2 | 5.09566 | -2.66299 | +0.00027 | -0.00488 (-3.22) |
+| HMM K=2 | 6 | 5.09809 | -2.66299 | +0.00027 | -0.00488 (-3.22) |
+| HMM K=3 | 12 | 5.10172 | -2.66299 | +0.00027 | -0.00489 (-3.22) |
+| HMM K=4 | 20 | 5.10656 | -2.66299 | +0.00027 | -0.00489 (-3.22) |
+
+(Bug caught pre-run: the first singular-series routine skipped the factor of 2 and gave S(6)=1; fixed
+and checked against S(6)=2, S(10)=4/3, S(30)=8/3 before anything was fit.)
+
+**Against the locked prediction:**
+1. **Held.** S0f is -2.66326 vs round-1 B0f -2.71819: +0.055 nats/gap. The geometric misfit was large;
+   the singular series is a far better "force" than ln p alone.
+2. **FAILED.** I predicted the previous-gap gain would shrink below the round-1 0.004 once mod-3/5/7
+   structure was explicit. It grew: S1c beats S0f by 0.00515 (z ~ 3.4), S1 by 0.00434. So the
+   previous-gap effect is not leakage of the residue structure; it survives, and is slightly larger,
+   with the singular series already in the base model. The extra shape freedom (c, S1c over S1) adds
+   only 0.0008 and is not distinguishable from zero (z = -0.71 for S1 vs S1c), so it is the *scale*
+   change by previous gap that matters. Fitted m by previous gap class: 0.965 / 0.852 / 0.849 / 0.902 /
+   0.780 for k_prev = 1, 2, 3, 4, >=5 (monotone-ish: a big gap is followed by a shorter-scale one, a
+   twin-prime gap by a longer-scale one).
+3. **Held.** No HMM beats S1c (all about -0.0049, z ~ -3.2). K = 2, 3, 4 all score *identically* to
+   K = 1 (-2.66299): the fitted states are copies of one another (m = 0.826-0.831, c = 1.05-1.10 in
+   every state). Self-transition 0.88-0.91 is meaningless between indistinguishable states. The only
+   thing the latent model learns is a global shape tweak, c ~ 1.07, worth +0.00027 nats/gap.
+4. **Held.** Train BIC rises monotonically with K among the HMMs (K=1 lowest); S1c has the lowest of all.
+
+**Conclusion: the latent-state hypothesis is refuted a second time, now under a properly specified
+emission.** With the mod-3/5/7 structure explicit, there is no residual hidden variable for a state to
+absorb: a K-state HMM with free scale AND free shape per state collapses to a single state.
+The only usable structure beyond the deterministic force is the observed previous gap.
+
+**Still untested:** rolling-origin folds (single split used); gap-to-gap dependence beyond lag 1 (e.g.
+two previous gaps, or the residue of the prime itself, p mod 30); a *non-stationary* latent that
+changes with position in ways a stationary-transition HMM can't represent.
